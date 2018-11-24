@@ -2,14 +2,14 @@
   "manifest": {
     "publishingInformation": {
       "locales": {
-        "en-US": {
+        "en-GB": {
           "summary": "Sample Short Description",
           "examplePhrases": [
             "Alexa open hello world",
             "hello",
             "help"
           ],
-          "name": "Hello World",
+          "name": "justWatch",
           "description": "Sample Full Description"
         }
       },
@@ -22,8 +22,13 @@
       "custom": {
         "endpoint": {
           "sourceDir": "lambda/custom",
-          "uri": "ask-custom-helloworld-default"
-        }
+          "uri": "justWatch"
+        },
+        "interfaces": [
+          {
+            "type": "RENDER_TEMPLATE"
+          }
+        ]
       }
     },
     "manifestVersion": "1.0"
