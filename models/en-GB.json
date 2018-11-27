@@ -82,6 +82,12 @@
           "samples": [
             "give me the description"
           ]
+        },
+        {
+          "name": "MoreIntent",
+          "samples": [
+            "hear more"
+          ]
         }
       ]
     }

@@ -5,43 +5,10 @@ const Alexa = require("ask-sdk-core");
 const JustWatch = require("justwatch-api");
 
 
-// var jw = new JustWatch();
+// let jw = new JustWatch();
 
 
 const invocationName = "where to watch";
-
-// Session Attributes 
-//   Alexa will track attributes for you, by default only during the lifespan of your session.
-//   The history[] array will track previous request(s), used for contextual Help/Yes/No handling.
-//   Set up DynamoDB persistence to have the skill save and reload these attributes between skill sessions.
-
-function getMemoryAttributes() {
-  const memoryAttributes = {
-    "history": [],
-
-
-    "launchCount": 0,
-    "lastUseTimestamp": 0,
-
-    "lastSpeechOutput": {},
-    // "nextIntent":[]
-
-    // "favoriteColor":"",
-    // "name":"",
-    // "namePronounce":"",
-    // "email":"",
-    // "mobileNumber":"",
-    // "city":"",
-    // "state":"",
-    // "postcode":"",
-    // "birthday":"",
-    // "bookmark":0,
-    // "wishlist":[],
-  };
-  return memoryAttributes;
-};
-
-const maxHistorySize = 20; // remember only latest 20 intents 
 
 
 // 1. Intent Handlers =============================================
@@ -392,37 +359,46 @@ const SearchIntent_Handler = {
     let locale = request.locale.replace('-','_');
     console.log(`[INFO] locale: ${locale}`);
 
-    var jw = new JustWatch({
+    let jw = new JustWatch({
       locale: locale
     });
 
     let sessionAttributes = attributesManager.getSessionAttributes();
 
-    let say = 'Here is the top result for ';
 
     let slotValues = getSlotValues(request.intent.slots);
     let titleSlot = slotValues.title.heardAs;
+  
     
-    say += titleSlot;
-    
-    var searchResult = await jw.search({
+    let searchResult = await jw.search({
       query: titleSlot
     });
+
+    let top5 = [];
+
+    for (i = 0; i < PAGINATION; i++) {
+      top5.push({
+        id:                     searchResult.items[i].id,
+        title:                  searchResult.items[i].title,
+        original_release_year:  searchResult.items[i].original_release_year,
+        short_description:      searchResult.items[i].short_description
+      })      
+    }
+    sessionAttributes.top5 = top5;
+    sessionAttributes.page = 1;
     
     let topResult = searchResult.items[0];
-    
-    console.log('[INFO] top result: ' + JSON.stringify(topResult, null, 4));
-    
-    sessionAttributes.topResult = topResult;
+
     attributesManager.setSessionAttributes(sessionAttributes);
 
-    let title = topResult.title;
+    let say = `Here is the top result for ${titleSlot}: `;
+    say += `${topResult.title} from ${topResult.original_release_year}: ${topResult.short_description} `
+    reprompt = `Do you want to hear more results, check where you can watch ${topResult.title} or hear more about it?`
+    say += reprompt;
     
-    say += ': ' + title;
-
     return responseBuilder
       .speak(say)
-      .reprompt('try again, ' + say)
+      .reprompt(reprompt)
       .getResponse();
   },
 };
@@ -507,6 +483,8 @@ const ErrorHandler = {
 //    const myObject = { "city": "Boston",  "state":"Massachusetts" };
 
 const APP_ID = undefined;  // TODO replace with your Skill ID (OPTIONAL).
+
+const PAGINATION = 5;
 
 // 3.  Helper Functions ===================================================================
 
@@ -694,185 +672,6 @@ function getPreviousSpeechOutput(attrs) {
 
 }
 
-function timeDelta(t1, t2) {
-
-  const dt1 = new Date(t1);
-  const dt2 = new Date(t2);
-  const timeSpanMS = dt2.getTime() - dt1.getTime();
-  const span = {
-    "timeSpanMIN": Math.floor(timeSpanMS / (1000 * 60)),
-    "timeSpanHR": Math.floor(timeSpanMS / (1000 * 60 * 60)),
-    "timeSpanDAY": Math.floor(timeSpanMS / (1000 * 60 * 60 * 24)),
-    "timeSpanDesc": ""
-  };
-
-
-  if (span.timeSpanHR < 2) {
-    span.timeSpanDesc = span.timeSpanMIN + " minutes";
-  } else if (span.timeSpanDAY < 2) {
-    span.timeSpanDesc = span.timeSpanHR + " hours";
-  } else {
-    span.timeSpanDesc = span.timeSpanDAY + " days";
-  }
-
-
-  return span;
-
-}
-
-
-const InitMemoryAttributesInterceptor = {
-  process(handlerInput) {
-    let sessionAttributes = {};
-    if (handlerInput.requestEnvelope.session['new']) {
-
-      sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-      let memoryAttributes = getMemoryAttributes();
-
-      if (Object.keys(sessionAttributes).length === 0) {
-
-        Object.keys(memoryAttributes).forEach(function (key) {  // initialize all attributes from global list 
-
-          sessionAttributes[key] = memoryAttributes[key];
-
-        });
-
-      }
-      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-
-    }
-  }
-};
-
-const RequestHistoryInterceptor = {
-  process(handlerInput) {
-
-    const thisRequest = handlerInput.requestEnvelope.request;
-    let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-    let history = sessionAttributes['history'] || [];
-
-    let IntentRequest = {};
-    if (thisRequest.type === 'IntentRequest') {
-
-      let slots = [];
-
-      IntentRequest = {
-        'IntentRequest': thisRequest.intent.name
-      };
-
-      if (thisRequest.intent.slots) {
-
-        for (let slot in thisRequest.intent.slots) {
-          let slotObj = {};
-          slotObj[slot] = thisRequest.intent.slots[slot].value;
-          slots.push(slotObj);
-        }
-
-        IntentRequest = {
-          'IntentRequest': thisRequest.intent.name,
-          'slots': slots
-        };
-
-      }
-
-    } else {
-      IntentRequest = { 'IntentRequest': thisRequest.type };
-    }
-    if (history.length > maxHistorySize - 1) {
-      history.shift();
-    }
-    history.push(IntentRequest);
-
-    handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-  }
-
-};
-
-
-
-
-const RequestPersistenceInterceptor = {
-  process(handlerInput) {
-
-    if (handlerInput.requestEnvelope.session['new']) {
-
-      return new Promise((resolve, reject) => {
-
-        handlerInput.attributesManager.getPersistentAttributes()
-
-          .then((sessionAttributes) => {
-            sessionAttributes = sessionAttributes || {};
-
-
-            sessionAttributes['launchCount'] += 1;
-
-            handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-            handlerInput.attributesManager.savePersistentAttributes()
-              .then(() => {
-                resolve();
-              })
-              .catch((err) => {
-                reject(err);
-              });
-          });
-
-      });
-
-    } // end session['new'] 
-  }
-};
-
-
-const ResponseRecordSpeechOutputInterceptor = {
-  process(handlerInput, responseOutput) {
-
-    let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    let lastSpeechOutput = {
-      "outputSpeech": responseOutput.outputSpeech.ssml,
-      "reprompt": responseOutput.reprompt.outputSpeech.ssml
-    };
-
-    sessionAttributes['lastSpeechOutput'] = lastSpeechOutput;
-
-    handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-  }
-};
-
-const ResponsePersistenceInterceptor = {
-  process(handlerInput, responseOutput) {
-
-    const ses = (typeof responseOutput.shouldEndSession == "undefined" ? true : responseOutput.shouldEndSession);
-
-    if (ses || handlerInput.requestEnvelope.request.type == 'SessionEndedRequest') { // skill was stopped or timed out 
-
-      let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-      sessionAttributes['lastUseTimestamp'] = new Date(handlerInput.requestEnvelope.request.timestamp).getTime();
-
-      handlerInput.attributesManager.setPersistentAttributes(sessionAttributes);
-
-      return new Promise((resolve, reject) => {
-        handlerInput.attributesManager.savePersistentAttributes()
-          .then(() => {
-            resolve();
-          })
-          .catch((err) => {
-            reject(err);
-          });
-
-      });
-
-    }
-
-  }
-};
-
 
 function shuffleArray(array) {  // Fisher Yates shuffle! 
 
@@ -916,8 +715,6 @@ exports.handler = skillBuilder
     SessionEndedHandler
   )
   .addErrorHandlers(ErrorHandler)
-  .addRequestInterceptors(InitMemoryAttributesInterceptor)
-  .addRequestInterceptors(RequestHistoryInterceptor)
   .addResponseInterceptors(function (handlerInput, response) {
     let type = handlerInput.requestEnvelope.request.type;
     let locale = handlerInput.requestEnvelope.request.locale;
