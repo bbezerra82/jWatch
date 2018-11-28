@@ -10,7 +10,9 @@
   "license": "ISC",
   "dependencies": {
     "ask-sdk-core": "^2.0.0",
+    "ask-sdk-dynamodb-persistence-adapter": "^2.3.0",
     "ask-sdk-model": "^1.0.0",
+    "json-query": "^2.2.2",
     "justwatch-api": "^1.0.4"
   }
 }

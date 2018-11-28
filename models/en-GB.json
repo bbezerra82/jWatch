@@ -28,6 +28,10 @@
           "samples": []
         },
         {
+          "name": "AMAZON.YesIntent",
+          "samples": []
+        },
+        {
           "name": "AMAZON.PageDownIntent",
           "samples": []
         },
@@ -68,6 +72,14 @@
           "samples": []
         },
         {
+          "name": "TellMeProvidersIntent",
+          "samples": [
+            "tell me what providers are available",
+            "tell me",
+            "what providers are available"
+          ]
+        },
+        {
           "name": "SearchIntent",
           "samples": [
             "search for {title}"
@@ -76,18 +88,6 @@
             "name": "title",
             "type": "AMAZON.SearchQuery"
           }]
-        },
-        {
-          "name": "DescriptionIntent",
-          "samples": [
-            "give me the description"
-          ]
-        },
-        {
-          "name": "MoreIntent",
-          "samples": [
-            "hear more"
-          ]
         }
       ]
     }

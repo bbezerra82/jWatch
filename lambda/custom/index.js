@@ -3,12 +3,20 @@
 
 const Alexa = require("ask-sdk-core");
 const JustWatch = require("justwatch-api");
+const JSONQuery = require("json-query");
+
+// set up for persistance
+const { DynamoDbPersistenceAdapter } = require('ask-sdk-dynamodb-persistence-adapter');
+const persistenceAdapter = new DynamoDbPersistenceAdapter({
+  tableName: 'Where2Watch',
+  createTable: true
+});
 
 
-// let jw = new JustWatch();
+// var jw = new JustWatch();
 
 
-const invocationName = "where to watch";
+const skillName = "where to watch";
 
 
 // 1. Intent Handlers =============================================
@@ -116,30 +124,6 @@ const AMAZON_NextIntent_Handler = {
 
     let say = 'Hello from AMAZON.NextIntent. ';
 
-
-    return responseBuilder
-      .speak(say)
-      .reprompt('try again, ' + say)
-      .getResponse();
-  },
-};
-
-const AMAZON_NoIntent_Handler = {
-  canHandle(handlerInput) {
-    const request = handlerInput.requestEnvelope.request;
-    return request.type === 'IntentRequest' && request.intent.name === 'AMAZON.NoIntent';
-  },
-  handle(handlerInput) {
-    const request = handlerInput.requestEnvelope.request;
-    const responseBuilder = handlerInput.responseBuilder;
-    let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-    let say = 'You said No. ';
-    let previousIntent = getPreviousIntent(sessionAttributes);
-
-    if (previousIntent && !handlerInput.requestEnvelope.session.new) {
-      say += 'Your last intent was ' + previousIntent + '. ';
-    }
 
     return responseBuilder
       .speak(say)
@@ -376,7 +360,7 @@ const SearchIntent_Handler = {
 
     let top5 = [];
 
-    for (i = 0; i < PAGINATION; i++) {
+    for (i = 0; i < PAGE_SIZE; i++) {
       top5.push({
         id:                     searchResult.items[i].id,
         title:                  searchResult.items[i].title,
@@ -393,7 +377,8 @@ const SearchIntent_Handler = {
 
     let say = `Here is the top result for ${titleSlot}: `;
     say += `${topResult.title} from ${topResult.original_release_year}: ${topResult.short_description} `
-    reprompt = `Do you want to hear more results, check where you can watch ${topResult.title} or hear more about it?`
+    reprompt = `Do you want to check where you can watch ${topResult.title}, hear more information about this title or check the other results?`;
+
     say += reprompt;
     
     return responseBuilder
@@ -402,6 +387,16 @@ const SearchIntent_Handler = {
       .getResponse();
   },
 };
+
+const MoreIntent_Handler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest' && request.intent.name === 'MoreIntent';
+  },
+  handle(handlerInput) {
+
+  }
+}
 
 const DescriptionIntent_Handler = {
   canHandle(handlerInput) {
@@ -429,6 +424,10 @@ const LaunchRequest_Handler = {
     return request.type === 'LaunchRequest';
   },
   handle(handlerInput) {
+    return startSkill(handlerInput);
+
+
+
     const responseBuilder = handlerInput.responseBuilder;
 
     let say = 'hello' + ' and welcome to ' + invocationName + ' ! Say help to hear some options.';
@@ -442,6 +441,240 @@ const LaunchRequest_Handler = {
       .withStandardCard('Welcome!',
         'Hello!\nThis is a card for your skill, ' + skillTitle,
         welcomeCardImg.smallImageUrl, welcomeCardImg.largeImageUrl)
+      .getResponse();
+  },
+};
+
+function startSkill(handlerInput) {
+  return new Promise((resolve, reject) => {
+    handlerInput.attributesManager.getPersistentAttributes()
+      .then((pAttributes) => {
+        const { responseBuilder, attributesManager } = handlerInput;
+
+        let sAttributes = attributesManager.getSessionAttributes();
+        const { favouritesProviders } = pAttributes;
+
+        sAttributes.skillState = 'mainMenu';
+
+        let speechText = `Welcome to ${skillName}, your go to skill to check where to stream movies and TV shows. `;
+        let reprompt = '';
+
+        if (typeof favouritesProviders === 'undefined') {
+          // favourites providers not set
+          speechText += `It looks like you haven't set your favourites provider yet. Do you want to do it now?`
+          reprompt += `Do you want to set your favourites providers now?`
+
+          attributesManager.setSessionAttributes(sAttributes);
+
+          resolve(responseBuilder
+            .speak(speechText)
+            .reprompt(reprompt)
+            .getResponse());
+        }
+
+        
+      })
+      .catch((error) => {
+        console.log(`[ERROR] Error: ${error}`);
+        reject(error);
+      })
+  });
+}
+
+const AMAZON_YesIntent_Handler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest' && request.intent.name === 'AMAZON.YesIntent';
+  },
+  handle(handlerInput) {
+    
+    const { responseBuilder, attributesManager } = handlerInput;
+
+    let sAttributes = attributesManager.getSessionAttributes();
+
+    let { skillState } = sAttributes;
+
+    if (skillState === 'mainMenu') {
+      return askFavourites(handlerInput);
+    } else if (skillState === 'readingProviders') {
+      const { attributesManager } = handlerInput;
+      const { providersList, page } = attributesManager.getSessionAttributes();
+      return readPage(handlerInput, providersList, page);
+    } else if (skillState === 'doneReadingProviders') {
+      return responseBuilder
+        .speak('done for the day')
+        .withShouldEndSession(true)
+        .getResponse();
+    }
+
+    // const { }
+    // const request = handlerInput.requestEnvelope.request;
+    // const responseBuilder = handlerInput.responseBuilder;
+    // let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+
+    // let say = 'You said Yes. ';
+    // let previousIntent = getPreviousIntent(sessionAttributes);
+
+    // if (previousIntent && !handlerInput.requestEnvelope.session.new) {
+    //   say += 'Your last intent was ' + previousIntent + '. ';
+    // }
+
+    // return responseBuilder
+    //   .speak(say)
+    //   .reprompt('try again, ' + say)
+    //   .getResponse();
+  },
+};
+
+function askFavourites(handlerInput) {
+  const { responseBuilder, attributesManager } = handlerInput;
+
+  let sAttributes = attributesManager.getSessionAttributes();
+
+  sAttributes.skillState = 'askFavourites';
+
+  let speechText = `Do you want to hear the providers available or do you already know your favourite ones?`;
+  let reprompt = `Should I tell you the available ones or do you konw already?`;
+
+  return responseBuilder
+    .speak(speechText)
+    .reprompt(reprompt)
+    .getResponse();
+}
+
+const TellMeProvidersIntent_Handler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest' && request.intent.name === 'TellMeProvidersIntent';
+  },
+  handle(handlerInput) {
+    return listProviders(handlerInput);
+  },
+};
+
+async function listProviders(handlerInput) {
+  const { requestEnvelope, attributesManager } = handlerInput;
+  let sAttributes = attributesManager.getSessionAttributes();
+
+  let locale = sAttributes.locale;
+  let page = sAttributes.page;
+
+  if (typeof locale === 'undefined') {
+    locale = requestEnvelope.request.locale.replace('-','_');
+    sAttributes.locale = locale;
+  }
+
+  if (typeof page === 'undefined') {
+    page = 0;
+    sAttributes.page = page;
+  }
+
+  let jw = new JustWatch({
+    locale: locale
+  });
+
+  let providers = await jw.getProviders({});
+
+  let providersList = JSONQuery('clear_name', {
+    data : providers
+  }).value;
+  
+  sAttributes.providersList = providersList;
+  sAttributes.skillState = 'readingProviders';
+
+  attributesManager.setSessionAttributes(sAttributes);
+
+  return readPage(handlerInput, providersList, page);
+  // let top5 = [];
+
+  // for (i = 0; i < PAGINATION; i++) {
+  //   top5.push({
+  //     id:                     searchResult.items[i].id,
+  //     title:                  searchResult.items[i].title,
+  //     original_release_year:  searchResult.items[i].original_release_year,
+  //     short_description:      searchResult.items[i].short_description
+  //   })      
+  // }
+  // sessionAttributes.top5 = top5;
+
+  // return new Promise((resolve, reject) => {
+  //   handlerInput.attributesManager.getPersistentAttributes()
+  //     .then((pAttributes) => {
+  //       const { responseBuilder } = handlerInput;
+
+
+  //     })
+  //     .catch((error) => {
+  //       console.log(`[ERROR] Error: ${error}`);
+  //       reject(error);
+  //     });
+  // });
+}
+
+function readPage(handlerInput, toRead, page) {
+  const { responseBuilder, attributesManager } = handlerInput;
+  
+  let sAttributes = attributesManager.getSessionAttributes();
+
+  let speech = '';
+  let reprompt = '';
+
+  for (i = page * PAGE_SIZE; (i < (page + 1) * PAGE_SIZE) && (i < toRead.length); i++) {
+    // console.log(`[INFO] readPage i = ${i}`);
+    if (i === toRead.length - 1) {
+      speech += `and lastly, ${toRead[i]}. `
+    } else if (i !== ((page + 1) * PAGE_SIZE) - 1) {
+      speech += `${toRead[i]}, `;
+    } else {
+      speech += `and ${toRead[i]}. `
+    }
+  }
+  // console.log(`[INFO] i = ${i}`);
+
+  if (i === toRead.length) {
+    if (sAttributes.skillState === 'readingProviders') {
+      reprompt += 'Do you want to add your favourites now?';
+      speech += `That was the last provider in my list. ${reprompt}`;
+      sAttributes.skillState = 'doneReadingProviders';
+      page = 0;
+      sAttributes.page = page;
+    }
+  } else {
+    reprompt = 'Do you want to hear more?';
+    speech += reprompt;
+    page++;
+    sAttributes.page = page;
+  }
+
+  
+  attributesManager.setSessionAttributes(sAttributes);
+  
+  return responseBuilder
+    .speak(speech)
+    .reprompt(reprompt)
+    .getResponse();
+}
+
+const AMAZON_NoIntent_Handler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest' && request.intent.name === 'AMAZON.NoIntent';
+  },
+  handle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    const responseBuilder = handlerInput.responseBuilder;
+    let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+
+    let say = 'You said No. ';
+    let previousIntent = getPreviousIntent(sessionAttributes);
+
+    if (previousIntent && !handlerInput.requestEnvelope.session.new) {
+      say += 'Your last intent was ' + previousIntent + '. ';
+    }
+
+    return responseBuilder
+      .speak(say)
+      .reprompt('try again, ' + say)
       .getResponse();
   },
 };
@@ -484,7 +717,7 @@ const ErrorHandler = {
 
 const APP_ID = undefined;  // TODO replace with your Skill ID (OPTIONAL).
 
-const PAGINATION = 5;
+const PAGE_SIZE = 5;
 
 // 3.  Helper Functions ===================================================================
 
@@ -699,6 +932,7 @@ exports.handler = skillBuilder
     AMAZON_NavigateSettingsIntent_Handler,
     AMAZON_NextIntent_Handler,
     AMAZON_NoIntent_Handler,
+    AMAZON_YesIntent_Handler,
     AMAZON_PageDownIntent_Handler,
     AMAZON_NavigateHomeIntent_Handler,
     AMAZON_PageUpIntent_Handler,
@@ -709,12 +943,14 @@ exports.handler = skillBuilder
     AMAZON_ScrollRightIntent_Handler,
     AMAZON_ScrollUpIntent_Handler,
     AMAZON_StopIntent_Handler,
-    SearchIntent_Handler,
-    DescriptionIntent_Handler,
+    // SearchIntent_Handler,
+    // DescriptionIntent_Handler,
     LaunchRequest_Handler,
+    TellMeProvidersIntent_Handler,
     SessionEndedHandler
   )
   .addErrorHandlers(ErrorHandler)
+  .withPersistenceAdapter(persistenceAdapter)
   .addResponseInterceptors(function (handlerInput, response) {
     let type = handlerInput.requestEnvelope.request.type;
     let locale = handlerInput.requestEnvelope.request.locale;
