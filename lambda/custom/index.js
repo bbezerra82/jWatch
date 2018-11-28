@@ -12,10 +12,6 @@ const persistenceAdapter = new DynamoDbPersistenceAdapter({
   createTable: true
 });
 
-
-// var jw = new JustWatch();
-
-
 const skillName = "where to watch";
 
 
@@ -501,30 +497,42 @@ const AMAZON_YesIntent_Handler = {
       const { providersList, page } = attributesManager.getSessionAttributes();
       return readPage(handlerInput, providersList, page);
     } else if (skillState === 'doneReadingProviders') {
+      return whichProviders(handlerInput);
       return responseBuilder
         .speak('done for the day')
         .withShouldEndSession(true)
         .getResponse();
     }
-
-    // const { }
-    // const request = handlerInput.requestEnvelope.request;
-    // const responseBuilder = handlerInput.responseBuilder;
-    // let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-    // let say = 'You said Yes. ';
-    // let previousIntent = getPreviousIntent(sessionAttributes);
-
-    // if (previousIntent && !handlerInput.requestEnvelope.session.new) {
-    //   say += 'Your last intent was ' + previousIntent + '. ';
-    // }
-
-    // return responseBuilder
-    //   .speak(say)
-    //   .reprompt('try again, ' + say)
-    //   .getResponse();
   },
 };
+
+const AddProvidersIntent_Handler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest' && request.intent.name === 'AddProvidersIntent';
+  },
+  handle(handlerInput) {
+    const { responseBuilder } = handlerInput;
+
+    let speechText = 'Hello from AddProvidersIntent_Handler';
+
+    return responseBuilder
+      .speak(speechText)
+      .getResponse();
+  },
+};
+
+function whichProviders(handlerInput) {
+  const { responseBuilder } = handlerInput;
+
+  let speech = `Which providers do you want to add?`;
+  let reprompt = `Tell me which providers I should add to your favourites list.`;
+
+  return responseBuilder
+    .speak(speech)
+    .reprompt(reprompt)
+    .getResponse();
+}
 
 function askFavourites(handlerInput) {
   const { responseBuilder, attributesManager } = handlerInput;
@@ -947,6 +955,7 @@ exports.handler = skillBuilder
     // DescriptionIntent_Handler,
     LaunchRequest_Handler,
     TellMeProvidersIntent_Handler,
+    AddProvidersIntent_Handler,
     SessionEndedHandler
   )
   .addErrorHandlers(ErrorHandler)

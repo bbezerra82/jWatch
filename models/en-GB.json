@@ -80,6 +80,18 @@
           ]
         },
         {
+          "name": "AddProvidersIntent",
+          "samples": [
+            "add {provider}"
+          ],
+          "slots": [
+            {
+              "name": "provider",
+              "type": "ProviderSlotType"
+            }
+          ]
+        },
+        {
           "name": "SearchIntent",
           "samples": [
             "search for {title}"
@@ -88,6 +100,168 @@
             "name": "title",
             "type": "AMAZON.SearchQuery"
           }]
+        }
+      ],
+      "types": [
+        {
+          "name": "ProviderSlotType",
+          "values": [
+            {
+              "name": {
+                  "value": "Netflix"
+                }
+            },
+            {
+                "name": {
+                    "value": "Now TV"
+                }
+            },
+            {
+                "name": {
+                    "value": "Amazon Prime Video"
+                }
+            },
+            {
+                "name": {
+                    "value": "Amazon Video"
+                }
+            },
+            {
+                "name": {
+                    "value": "All 4"
+                }
+            },
+            {
+                "name": {
+                    "value": "Sky Go"
+                }
+            },
+            {
+                "name": {
+                    "value": "BBC iPlayer"
+                }
+            },
+            {
+                "name": {
+                    "value": "hayu"
+                }
+            },
+            {
+                "name": {
+                    "value": "BFI Player"
+                }
+            },
+            {
+                "name": {
+                    "value": "Google Play Movies"
+                }
+            },
+            {
+                "name": {
+                    "value": "Apple iTunes"
+                }
+            },
+            {
+                "name": {
+                    "value": "Sky Store"
+                }
+            },
+            {
+                "name": {
+                    "value": "FilmStruck"
+                }
+            },
+            {
+                "name": {
+                    "value": "Starz Play Amazon Channel"
+                }
+            },
+            {
+                "name": {
+                    "value": "UKTV Play"
+                }
+            },
+            {
+                "name": {
+                    "value": "ITV Player"
+                }
+            },
+            {
+                "name": {
+                    "value": "DisneyLife"
+                }
+            },
+            {
+                "name": {
+                    "value": "Shudder"
+                }
+            },
+            {
+                "name": {
+                    "value": "Talk Talk TV"
+                }
+            },
+            {
+                "name": {
+                    "value": "Rakuten TV"
+                }
+            },
+            {
+                "name": {
+                    "value": "Pantaflix"
+                }
+            },
+            {
+                "name": {
+                    "value": "YouTube"
+                }
+            },
+            {
+                "name": {
+                    "value": "PlayStation"
+                }
+            },
+            {
+                "name": {
+                    "value": "Microsoft Store"
+                }
+            },
+            {
+                "name": {
+                    "value": "Chili"
+                }
+            },
+            {
+                "name": {
+                    "value": "Mubi"
+                }
+            },
+            {
+                "name": {
+                    "value": "Tubi TV"
+                }
+            },
+            {
+                "name": {
+                    "value": "GuideDoc"
+                }
+            },
+            {
+                "name": {
+                    "value": "Movietickets"
+                }
+            },
+            {
+                "name": {
+                    "value": "Netflix Kids"
+                }
+            },
+            {
+                "name": {
+                    "value": "YouTube Premium"
+                }
+            }
+          ]
         }
       ]
     }
