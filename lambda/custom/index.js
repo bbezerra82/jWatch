@@ -336,7 +336,7 @@ const SearchIntent_Handler = {
     const { requestEnvelope, responseBuilder, attributesManager } = handlerInput;
     const request = requestEnvelope.request;
 
-    let locale = request.locale.replace('-','_');
+    let locale = request.locale.replace('-', '_');
     console.log(`[INFO] locale: ${locale}`);
 
     let jw = new JustWatch({
@@ -348,8 +348,8 @@ const SearchIntent_Handler = {
 
     let slotValues = getSlotValues(request.intent.slots);
     let titleSlot = slotValues.title.heardAs;
-  
-    
+
+
     let searchResult = await jw.search({
       query: titleSlot
     });
@@ -358,15 +358,15 @@ const SearchIntent_Handler = {
 
     for (i = 0; i < PAGE_SIZE; i++) {
       top5.push({
-        id:                     searchResult.items[i].id,
-        title:                  searchResult.items[i].title,
-        original_release_year:  searchResult.items[i].original_release_year,
-        short_description:      searchResult.items[i].short_description
-      })      
+        id: searchResult.items[i].id,
+        title: searchResult.items[i].title,
+        original_release_year: searchResult.items[i].original_release_year,
+        short_description: searchResult.items[i].short_description
+      })
     }
     sessionAttributes.top5 = top5;
     sessionAttributes.page = 1;
-    
+
     let topResult = searchResult.items[0];
 
     attributesManager.setSessionAttributes(sessionAttributes);
@@ -376,7 +376,7 @@ const SearchIntent_Handler = {
     reprompt = `Do you want to check where you can watch ${topResult.title}, hear more information about this title or check the other results?`;
 
     say += reprompt;
-    
+
     return responseBuilder
       .speak(say)
       .reprompt(reprompt)
@@ -421,54 +421,58 @@ const LaunchRequest_Handler = {
   },
   handle(handlerInput) {
     return startSkill(handlerInput);
-
-
-
-    const responseBuilder = handlerInput.responseBuilder;
-
-    let say = 'hello' + ' and welcome to ' + invocationName + ' ! Say help to hear some options.';
-
-    let skillTitle = capitalize(invocationName);
-
-
-    return responseBuilder
-      .speak(say)
-      .reprompt('try again, ' + say)
-      .withStandardCard('Welcome!',
-        'Hello!\nThis is a card for your skill, ' + skillTitle,
-        welcomeCardImg.smallImageUrl, welcomeCardImg.largeImageUrl)
-      .getResponse();
   },
 };
+
+const ADJECTIVES = [
+  'goto',
+  'best',
+  'amazing',
+  'awesome',
+  'distinctive',
+]
 
 function startSkill(handlerInput) {
   return new Promise((resolve, reject) => {
     handlerInput.attributesManager.getPersistentAttributes()
       .then((pAttributes) => {
-        const { responseBuilder, attributesManager } = handlerInput;
+        const { responseBuilder, attributesManager, requestEnvelope } = handlerInput;
 
         let sAttributes = attributesManager.getSessionAttributes();
+
+        let locale = sAttributes.locale;
+      
+        if (typeof locale === 'undefined') {
+          locale = requestEnvelope.request.locale.replace('-', '_');
+          sAttributes.locale = locale;
+        }
+        
         const { favouritesProviders } = pAttributes;
 
         sAttributes.skillState = 'mainMenu';
 
-        let speechText = `Welcome to ${skillName}, your go to skill to check where to stream movies and TV shows. `;
+        let speechText = `Welcome to ${skillName}, your ${randomElement(ADJECTIVES)} skill to check where to stream movies and TV shows. `;
         let reprompt = '';
+        let favourites = '';
 
         if (typeof favouritesProviders === 'undefined') {
           // favourites providers not set
-          speechText += `It looks like you haven't set your favourites provider yet. Do you want to do it now?`
-          reprompt += `Do you want to set your favourites providers now?`
-
-          attributesManager.setSessionAttributes(sAttributes);
-
-          resolve(responseBuilder
-            .speak(speechText)
-            .reprompt(reprompt)
-            .getResponse());
+          speechText += `It looks like you haven't set your favourite providers yet. You can do so by saying add, followed by the name of up to three providers. Or `
+          favourites += `Or tell me which providers to add to your favourites list.`
+          // reprompt += `Do you want to set your favourites providers now?`
         }
 
-        
+        speechText += `just ask me to search for a movie or TV show.`;
+        reprompt += `What movie or TV show do you want to watch? ${favourites}`
+
+        attributesManager.setSessionAttributes(sAttributes);
+
+        resolve(responseBuilder
+          .speak(speechText)
+          .reprompt(reprompt)
+          .getResponse());
+
+
       })
       .catch((error) => {
         console.log(`[ERROR] Error: ${error}`);
@@ -483,7 +487,7 @@ const AMAZON_YesIntent_Handler = {
     return request.type === 'IntentRequest' && request.intent.name === 'AMAZON.YesIntent';
   },
   handle(handlerInput) {
-    
+
     const { responseBuilder, attributesManager } = handlerInput;
 
     let sAttributes = attributesManager.getSessionAttributes();
@@ -512,15 +516,73 @@ const AddProvidersIntent_Handler = {
     return request.type === 'IntentRequest' && request.intent.name === 'AddProvidersIntent';
   },
   handle(handlerInput) {
-    const { responseBuilder } = handlerInput;
+    const { attributesManager } = handlerInput;
 
-    let speechText = 'Hello from AddProvidersIntent_Handler';
+    let sAttributes = attributesManager.getSessionAttributes();
 
-    return responseBuilder
-      .speak(speechText)
-      .getResponse();
+    sAttributes.skillState = 'addingFavs';
+
+    attributesManager.setSessionAttributes(sAttributes);
+
+    return addProviders(handlerInput);
   },
 };
+
+function addProviders(handlerInput) {
+  return new Promise((resolve, reject) => {
+    const { responseBuilder, attributesManager, requestEnvelope } = handlerInput;
+    attributesManager.getPersistentAttributes()
+      .then((pAttributes) => {
+        const request = requestEnvelope.request;
+        let speechText = '';
+
+        let slotValues = getSlotValues(request.intent.slots);
+        // getSlotValues returns .heardAs, .resolved, and .isValidated for each slot, according to request slot status codes ER_SUCCESS_MATCH, ER_SUCCESS_NO_MATCH, or traditional simple request slot without resolutions
+
+        let { favourites } = pAttributes;
+
+        if (typeof favourites === 'undefined') {
+          pAttributes.favourites = {
+            'providers': []
+          };
+          favourites = pAttributes.favourites;
+        }
+
+        let providers = JSONQuery('[*][resolved]',
+          {
+            data: slotValues
+          }).value;
+
+        
+        for (i = 0; (i < providers.length) && (providers[i] !== ''); i++) {
+          favourites.providers.push(providers[i]);
+        }
+
+        for (j = 0; j < favourites.providers.length; j++) {
+          speechText += `${providers[j]}`;
+          if ((j === favourites.providers.length - 2) && (favourites.providers.length > 1)) {
+            speechText += ' and ';
+          } else if ((j !== favourites.providers.length) && (favourites.providers.length > 1)) {
+            speechText += ', ';
+          }
+        }
+
+        speechText += ' added. Do you want to hear which other providers I can check or do you want to search for something to watch?';
+
+
+        attributesManager.setPersistentAttributes(pAttributes);
+        attributesManager.savePersistentAttributes();
+
+        resolve(responseBuilder
+          .speak(speechText)
+          .getResponse());
+      })
+      .catch((error) => {
+        console.log(`[ERROR] Error: ${error}`);
+        reject(error);
+      });
+  });
+}
 
 function whichProviders(handlerInput) {
   const { responseBuilder } = handlerInput;
@@ -568,7 +630,7 @@ async function listProviders(handlerInput) {
   let page = sAttributes.page;
 
   if (typeof locale === 'undefined') {
-    locale = requestEnvelope.request.locale.replace('-','_');
+    locale = requestEnvelope.request.locale.replace('-', '_');
     sAttributes.locale = locale;
   }
 
@@ -584,9 +646,9 @@ async function listProviders(handlerInput) {
   let providers = await jw.getProviders({});
 
   let providersList = JSONQuery('clear_name', {
-    data : providers
+    data: providers
   }).value;
-  
+
   sAttributes.providersList = providersList;
   sAttributes.skillState = 'readingProviders';
 
@@ -621,7 +683,7 @@ async function listProviders(handlerInput) {
 
 function readPage(handlerInput, toRead, page) {
   const { responseBuilder, attributesManager } = handlerInput;
-  
+
   let sAttributes = attributesManager.getSessionAttributes();
 
   let speech = '';
@@ -654,9 +716,9 @@ function readPage(handlerInput, toRead, page) {
     sAttributes.page = page;
   }
 
-  
+
   attributesManager.setSessionAttributes(sAttributes);
-  
+
   return responseBuilder
     .speak(speech)
     .reprompt(reprompt)

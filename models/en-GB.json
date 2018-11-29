@@ -75,18 +75,39 @@
           "name": "TellMeProvidersIntent",
           "samples": [
             "tell me what providers are available",
-            "tell me",
-            "what providers are available"
+            "tell me which providers are available",
+            "tell me what other providers are available",
+            "tell me which other providers are available",
+            "what providers are available",
+            "which providers are available",
+            "what other providers are available",
+            "which other providers are available"
           ]
         },
         {
           "name": "AddProvidersIntent",
           "samples": [
-            "add {provider}"
+            "add {providerA}",
+            "add {providerA} to my favourites",
+            "add {providerA} to my favourites list",
+            "add {providerA} and {providerB}",
+            "add {providerA} and {providerB} to my favourites",
+            "add {providerA} and {providerB} to my favourites list",
+            "add {providerA} {providerB} and {providerC}",
+            "add {providerA} {providerB} and {providerC} to my favourites",
+            "add {providerA} {providerB} and {providerC} to my favourites list"
           ],
           "slots": [
             {
-              "name": "provider",
+              "name": "providerA",
+              "type": "ProviderSlotType"
+            },
+            {
+              "name": "providerB",
+              "type": "ProviderSlotType"
+            },
+            {
+              "name": "providerC",
               "type": "ProviderSlotType"
             }
           ]
