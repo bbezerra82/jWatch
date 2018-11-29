@@ -139,7 +139,12 @@
             },
             {
                 "name": {
-                    "value": "Amazon Prime Video"
+                    "value": "Amazon Prime Video",
+                    "synonyms": [
+                        "Amazon Prime",
+                        "Prime",
+                        "Prime Video"
+                    ]
                 }
             },
             {
@@ -159,7 +164,11 @@
             },
             {
                 "name": {
-                    "value": "BBC iPlayer"
+                    "value": "BBC iPlayer",
+                    "synonyms": [
+                        "BBC",
+                        "iplayer"
+                    ]
                 }
             },
             {
@@ -169,17 +178,29 @@
             },
             {
                 "name": {
-                    "value": "BFI Player"
+                    "value": "BFI Player",
+                    "synonyms": [
+                        "BFI"
+                    ]
                 }
             },
             {
                 "name": {
-                    "value": "Google Play Movies"
+                    "value": "Google Play Movies",
+                    "synonyms": [
+                        "Google",
+                        "Google Play"
+                    ]
                 }
             },
             {
                 "name": {
-                    "value": "Apple iTunes"
+                    "value": "Apple iTunes",
+                    "synonyms": [
+                        "iTunes",
+                        "Apple",
+                        "Apple TV"
+                    ]
                 }
             },
             {
@@ -194,22 +215,35 @@
             },
             {
                 "name": {
-                    "value": "Starz Play Amazon Channel"
+                    "value": "Starz Play Amazon Channel",
+                    "synonyms": [
+                        "Starz",
+                        "Starz Play"
+                    ]
                 }
             },
             {
                 "name": {
-                    "value": "UKTV Play"
+                    "value": "UKTV Play",
+                    "synonyms": [
+                        "UKTV"
+                    ]
                 }
             },
             {
                 "name": {
-                    "value": "ITV Player"
+                    "value": "ITV Player",
+                    "synonyms": [
+                        "ITV"
+                    ]
                 }
             },
             {
                 "name": {
-                    "value": "DisneyLife"
+                    "value": "DisneyLife",
+                    "synonyms": [
+                        "Disney"
+                    ]
                 }
             },
             {
@@ -219,12 +253,19 @@
             },
             {
                 "name": {
-                    "value": "Talk Talk TV"
+                    "value": "Talk Talk TV",
+                    "synonyms": [
+                        "Talk Talk",
+                        "Talk"
+                    ]
                 }
             },
             {
                 "name": {
-                    "value": "Rakuten TV"
+                    "value": "Rakuten TV",
+                    "synonyms": [
+                        "Rakuten"
+                    ]
                 }
             },
             {
@@ -239,12 +280,18 @@
             },
             {
                 "name": {
-                    "value": "PlayStation"
+                    "value": "PlayStation",
+                    "synonyms": [
+                        "PS"
+                    ]
                 }
             },
             {
                 "name": {
-                    "value": "Microsoft Store"
+                    "value": "Microsoft Store",
+                    "synonyms": [
+                        "Microsoft"
+                    ]
                 }
             },
             {
@@ -259,7 +306,10 @@
             },
             {
                 "name": {
-                    "value": "Tubi TV"
+                    "value": "Tubi TV",
+                    "synonyms": [
+                        "Tubi"
+                    ]
                 }
             },
             {

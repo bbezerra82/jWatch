@@ -441,12 +441,12 @@ function startSkill(handlerInput) {
         let sAttributes = attributesManager.getSessionAttributes();
 
         let locale = sAttributes.locale;
-      
+
         if (typeof locale === 'undefined') {
           locale = requestEnvelope.request.locale.replace('-', '_');
           sAttributes.locale = locale;
         }
-        
+
         const { favouritesProviders } = pAttributes;
 
         sAttributes.skillState = 'mainMenu';
@@ -471,8 +471,6 @@ function startSkill(handlerInput) {
           .speak(speechText)
           .reprompt(reprompt)
           .getResponse());
-
-
       })
       .catch((error) => {
         console.log(`[ERROR] Error: ${error}`);
@@ -536,8 +534,8 @@ function addProviders(handlerInput) {
         const request = requestEnvelope.request;
         let speechText = '';
 
-        let slotValues = getSlotValues(request.intent.slots);
         // getSlotValues returns .heardAs, .resolved, and .isValidated for each slot, according to request slot status codes ER_SUCCESS_MATCH, ER_SUCCESS_NO_MATCH, or traditional simple request slot without resolutions
+        let slotValues = getSlotValues(request.intent.slots);
 
         let { favourites } = pAttributes;
 
@@ -553,7 +551,7 @@ function addProviders(handlerInput) {
             data: slotValues
           }).value;
 
-        
+
         for (i = 0; (i < providers.length) && (providers[i] !== ''); i++) {
           favourites.providers.push(providers[i]);
         }
@@ -562,7 +560,7 @@ function addProviders(handlerInput) {
           speechText += `${providers[j]}`;
           if ((j === favourites.providers.length - 2) && (favourites.providers.length > 1)) {
             speechText += ' and ';
-          } else if ((j !== favourites.providers.length) && (favourites.providers.length > 1)) {
+          } else if ((j !== favourites.providers.length - 1) && (favourites.providers.length > 1)) {
             speechText += ', ';
           }
         }
@@ -622,63 +620,62 @@ const TellMeProvidersIntent_Handler = {
   },
 };
 
-async function listProviders(handlerInput) {
-  const { requestEnvelope, attributesManager } = handlerInput;
-  let sAttributes = attributesManager.getSessionAttributes();
+function listProviders(handlerInput) {
+  return new Promise((resolve, reject) => {
+    const { responseBuilder, attributesManager, requestEnvelope } = handlerInput;
+    attributesManager.getPersistentAttributes()
+      // due to the 'await' further down, this arrow function must be async
+      .then(async (pAttributes) => {
+        const { favourites } = pAttributes;
+        let providers = [];
 
-  let locale = sAttributes.locale;
-  let page = sAttributes.page;
+        // If there are providers saved, then pass them to the providers array, otherwise it stays empty
+        if ((typeof favourites !== 'undefined') && (typeof favourites.providers !== 'undefined')) {
+           providers = favourites.providers;
+        } 
 
-  if (typeof locale === 'undefined') {
-    locale = requestEnvelope.request.locale.replace('-', '_');
-    sAttributes.locale = locale;
-  }
+        let sAttributes = attributesManager.getSessionAttributes();
 
-  if (typeof page === 'undefined') {
-    page = 0;
-    sAttributes.page = page;
-  }
+        let locale = sAttributes.locale;
+        let page = sAttributes.page;
 
-  let jw = new JustWatch({
-    locale: locale
+        if (typeof local === 'undefined') {
+          locale = requestEnvelope.request.locale.replace('-', '_');
+          sAttributes.locale = locale;
+        }
+
+        if (typeof page === 'undefined') {
+          page = 0;
+          sAttributes.page = page;
+        }
+
+        let jw = new JustWatch({
+          locale: locale
+        });
+
+        let providersList = JSONQuery('clear_name', {
+          data: await jw.getProviders({})
+        }).value;
+
+        // checks if the favourite providers stored are also contained in the array collected by jw. If true, removes from the set.
+        for (i = 0; i < providers.length; i++) {
+          if (providersList.includes(providers[i])) {
+            providersList.splice(providersList.indexOf(providers[i]), 1)
+          }
+        }
+
+        sAttributes.skillState = 'readingProviders';
+        sAttributes.providersList = providersList;
+
+        attributesManager.setSessionAttributes(sAttributes);
+
+        resolve(readPage(handlerInput, providersList, page));
+      })
+      .catch((error) => {
+        console.log(`[ERROR] Error: ${error}`);
+        reject(error);
+      });
   });
-
-  let providers = await jw.getProviders({});
-
-  let providersList = JSONQuery('clear_name', {
-    data: providers
-  }).value;
-
-  sAttributes.providersList = providersList;
-  sAttributes.skillState = 'readingProviders';
-
-  attributesManager.setSessionAttributes(sAttributes);
-
-  return readPage(handlerInput, providersList, page);
-  // let top5 = [];
-
-  // for (i = 0; i < PAGINATION; i++) {
-  //   top5.push({
-  //     id:                     searchResult.items[i].id,
-  //     title:                  searchResult.items[i].title,
-  //     original_release_year:  searchResult.items[i].original_release_year,
-  //     short_description:      searchResult.items[i].short_description
-  //   })      
-  // }
-  // sessionAttributes.top5 = top5;
-
-  // return new Promise((resolve, reject) => {
-  //   handlerInput.attributesManager.getPersistentAttributes()
-  //     .then((pAttributes) => {
-  //       const { responseBuilder } = handlerInput;
-
-
-  //     })
-  //     .catch((error) => {
-  //       console.log(`[ERROR] Error: ${error}`);
-  //       reject(error);
-  //     });
-  // });
 }
 
 function readPage(handlerInput, toRead, page) {

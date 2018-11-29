@@ -83,3 +83,5 @@ typings/
 
 # .DS_Store files
 .DS_Store
+.DS_Store
+lambda/custom/.DS_Store
