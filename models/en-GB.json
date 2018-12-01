@@ -1,340 +1,373 @@
 {
-  "interactionModel": {
-    "languageModel": {
-      "invocationName": "where to watch",
-      "intents": [
-        {
-          "name": "AMAZON.CancelIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.HelpIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.MoreIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.NavigateSettingsIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.NextIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.NoIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.YesIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.PageDownIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.NavigateHomeIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.PageUpIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.PreviousIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.RepeatIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.ScrollDownIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.ScrollLeftIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.ScrollRightIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.ScrollUpIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.StopIntent",
-          "samples": []
-        },
-        {
-          "name": "TellMeProvidersIntent",
-          "samples": [
-            "tell me what providers are available",
-            "tell me which providers are available",
-            "tell me what other providers are available",
-            "tell me which other providers are available",
-            "what providers are available",
-            "which providers are available",
-            "what other providers are available",
-            "which other providers are available"
-          ]
-        },
-        {
-          "name": "AddProvidersIntent",
-          "samples": [
-            "add {providerA}",
-            "add {providerA} to my favourites",
-            "add {providerA} to my favourites list",
-            "add {providerA} and {providerB}",
-            "add {providerA} and {providerB} to my favourites",
-            "add {providerA} and {providerB} to my favourites list",
-            "add {providerA} {providerB} and {providerC}",
-            "add {providerA} {providerB} and {providerC} to my favourites",
-            "add {providerA} {providerB} and {providerC} to my favourites list"
-          ],
-          "slots": [
-            {
-              "name": "providerA",
-              "type": "ProviderSlotType"
-            },
-            {
-              "name": "providerB",
-              "type": "ProviderSlotType"
-            },
-            {
-              "name": "providerC",
-              "type": "ProviderSlotType"
-            }
-          ]
-        },
-        {
-          "name": "SearchIntent",
-          "samples": [
-            "search for {title}"
-          ],
-          "slots": [{
-            "name": "title",
-            "type": "AMAZON.SearchQuery"
-          }]
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "where to watch",
+            "intents": [
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.MoreIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateSettingsIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NextIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NoIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.YesIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.PageDownIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateHomeIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.PageUpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.PreviousIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.RepeatIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.ScrollDownIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.ScrollLeftIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.ScrollRightIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.ScrollUpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": []
+                },
+                {
+                    "name": "TellMeProvidersIntent",
+                    "samples": [
+                        "tell me what providers are available",
+                        "tell me which providers are available",
+                        "tell me what other providers are available",
+                        "tell me which other providers are available",
+                        "what providers are available",
+                        "which providers are available",
+                        "what other providers are available",
+                        "which other providers are available"
+                    ]
+                },
+                {
+                    "name": "AddProvidersIntent",
+                    "samples": [
+                        "add {providerA}",
+                        "add {providerA} to my favourites",
+                        "add {providerA} to my favourites list",
+                        "add {providerA} and {providerB}",
+                        "add {providerA} and {providerB} to my favourites",
+                        "add {providerA} and {providerB} to my favourites list",
+                        "add {providerA} {providerB} and {providerC}",
+                        "add {providerA} {providerB} and {providerC} to my favourites",
+                        "add {providerA} {providerB} and {providerC} to my favourites list"
+                    ],
+                    "slots": [
+                        {
+                            "name": "providerA",
+                            "type": "ProviderSlotType"
+                        },
+                        {
+                            "name": "providerB",
+                            "type": "ProviderSlotType"
+                        },
+                        {
+                            "name": "providerC",
+                            "type": "ProviderSlotType"
+                        }
+                    ]
+                },
+                {
+                    "name": "SearchIntent",
+                    "samples": [
+                        "search for {title}"
+                    ],
+                    "slots": [
+                        {
+                            "name": "title",
+                            "type": "AMAZON.SearchQuery"
+                        }
+                    ]
+                }
+            ],
+            "types": [
+                {
+                    "name": "ProviderSlotType",
+                    "values": [
+                        {
+                            "id": "nfx",
+                            "name": {
+                                "value": "Netflix"
+                            }
+                        },
+                        {
+                            "id": "ntv",
+                            "name": {
+                                "value": "Now TV"
+                            }
+                        },
+                        {
+                            "id": "amp",
+                            "name": {
+                                "value": "Amazon Prime Video",
+                                "synonyms": [
+                                    "Amazon Prime",
+                                    "Prime",
+                                    "Prime Video"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "amz",
+                            "name": {
+                                "value": "Amazon Video"
+                            }
+                        },
+                        {
+                            "id": "al4",
+                            "name": {
+                                "value": "All 4"
+                            }
+                        },
+                        {
+                            "id": "skg",
+                            "name": {
+                                "value": "Sky Go"
+                            }
+                        },
+                        {
+                            "id": "bbc",
+                            "name": {
+                                "value": "BBC iPlayer",
+                                "synonyms": [
+                                    "BBC",
+                                    "iplayer"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "hay",
+                            "name": {
+                                "value": "hayu"
+                            }
+                        },
+                        {
+                            "id": "bfi",
+                            "name": {
+                                "value": "BFI Player",
+                                "synonyms": [
+                                    "BFI"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "ply",
+                            "name": {
+                                "value": "Google Play Movies",
+                                "synonyms": [
+                                    "Google",
+                                    "Google Play"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "itu",
+                            "name": {
+                                "value": "Apple iTunes",
+                                "synonyms": [
+                                    "iTunes",
+                                    "Apple",
+                                    "Apple TV"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "sks",
+                            "name": {
+                                "value": "Sky Store"
+                            }
+                        },
+                        {
+                            "id": "fsk",
+                            "name": {
+                                "value": "FilmStruck"
+                            }
+                        },
+                        {
+                            "id": "ast",
+                            "name": {
+                                "value": "Starz Play Amazon Channel",
+                                "synonyms": [
+                                    "Starz",
+                                    "Starz Play"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "ukt",
+                            "name": {
+                                "value": "UKTV Play",
+                                "synonyms": [
+                                    "UKTV"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "itv",
+                            "name": {
+                                "value": "ITV Player",
+                                "synonyms": [
+                                    "ITV"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "dli",
+                            "name": {
+                                "value": "DisneyLife",
+                                "synonyms": [
+                                    "Disney"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "shd",
+                            "name": {
+                                "value": "Shudder"
+                            }
+                        },
+                        {
+                            "id": "ttv",
+                            "name": {
+                                "value": "Talk Talk TV",
+                                "synonyms": [
+                                    "Talk Talk",
+                                    "Talk"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "wki",
+                            "name": {
+                                "value": "Rakuten TV",
+                                "synonyms": [
+                                    "Rakuten"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "pfx",
+                            "name": {
+                                "value": "Pantaflix"
+                            }
+                        },
+                        {
+                            "id": "yot",
+                            "name": {
+                                "value": "YouTube"
+                            }
+                        },
+                        {
+                            "id": "pls",
+                            "name": {
+                                "value": "PlayStation",
+                                "synonyms": [
+                                    "PS"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "msf",
+                            "name": {
+                                "value": "Microsoft Store",
+                                "synonyms": [
+                                    "Microsoft"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "chi",
+                            "name": {
+                                "value": "Chili"
+                            }
+                        },
+                        {
+                            "id": "mbi",
+                            "name": {
+                                "value": "Mubi"
+                            }
+                        },
+                        {
+                            "id": "tbv",
+                            "name": {
+                                "value": "Tubi TV",
+                                "synonyms": [
+                                    "Tubi"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "gdc",
+                            "name": {
+                                "value": "GuideDoc"
+                            }
+                        },
+                        {
+                            "id": "mts",
+                            "name": {
+                                "value": "Movietickets"
+                            }
+                        },
+                        {
+                            "id": "nfk",
+                            "name": {
+                                "value": "Netflix Kids"
+                            }
+                        },
+                        {
+                            "id": "ytr",
+                            "name": {
+                                "value": "YouTube Premium"
+                            }
+                        }
+                    ]
+                }
+            ]
         }
-      ],
-      "types": [
-        {
-          "name": "ProviderSlotType",
-          "values": [
-            {
-              "name": {
-                  "value": "Netflix"
-                }
-            },
-            {
-                "name": {
-                    "value": "Now TV"
-                }
-            },
-            {
-                "name": {
-                    "value": "Amazon Prime Video",
-                    "synonyms": [
-                        "Amazon Prime",
-                        "Prime",
-                        "Prime Video"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "Amazon Video"
-                }
-            },
-            {
-                "name": {
-                    "value": "All 4"
-                }
-            },
-            {
-                "name": {
-                    "value": "Sky Go"
-                }
-            },
-            {
-                "name": {
-                    "value": "BBC iPlayer",
-                    "synonyms": [
-                        "BBC",
-                        "iplayer"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "hayu"
-                }
-            },
-            {
-                "name": {
-                    "value": "BFI Player",
-                    "synonyms": [
-                        "BFI"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "Google Play Movies",
-                    "synonyms": [
-                        "Google",
-                        "Google Play"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "Apple iTunes",
-                    "synonyms": [
-                        "iTunes",
-                        "Apple",
-                        "Apple TV"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "Sky Store"
-                }
-            },
-            {
-                "name": {
-                    "value": "FilmStruck"
-                }
-            },
-            {
-                "name": {
-                    "value": "Starz Play Amazon Channel",
-                    "synonyms": [
-                        "Starz",
-                        "Starz Play"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "UKTV Play",
-                    "synonyms": [
-                        "UKTV"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "ITV Player",
-                    "synonyms": [
-                        "ITV"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "DisneyLife",
-                    "synonyms": [
-                        "Disney"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "Shudder"
-                }
-            },
-            {
-                "name": {
-                    "value": "Talk Talk TV",
-                    "synonyms": [
-                        "Talk Talk",
-                        "Talk"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "Rakuten TV",
-                    "synonyms": [
-                        "Rakuten"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "Pantaflix"
-                }
-            },
-            {
-                "name": {
-                    "value": "YouTube"
-                }
-            },
-            {
-                "name": {
-                    "value": "PlayStation",
-                    "synonyms": [
-                        "PS"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "Microsoft Store",
-                    "synonyms": [
-                        "Microsoft"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "Chili"
-                }
-            },
-            {
-                "name": {
-                    "value": "Mubi"
-                }
-            },
-            {
-                "name": {
-                    "value": "Tubi TV",
-                    "synonyms": [
-                        "Tubi"
-                    ]
-                }
-            },
-            {
-                "name": {
-                    "value": "GuideDoc"
-                }
-            },
-            {
-                "name": {
-                    "value": "Movietickets"
-                }
-            },
-            {
-                "name": {
-                    "value": "Netflix Kids"
-                }
-            },
-            {
-                "name": {
-                    "value": "YouTube Premium"
-                }
-            }
-          ]
-        }
-      ]
     }
-  }
 }

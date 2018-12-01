@@ -10,7 +10,7 @@
         },
         "interactionModel": {
           "en-GB": {
-            "eTag": "90fb205628300c036d918215268e813e"
+            "eTag": "deeba51750a864aec037559668a337fb"
           }
         },
         "lambda": [
@@ -23,7 +23,7 @@
             "codeUri": "lambda/custom",
             "functionName": "justWatch",
             "handler": "index.handler",
-            "revisionId": "2f9ae704-66a9-463a-bda0-4b1a56963042",
+            "revisionId": "d7273a4a-4899-4ffc-b56c-5fb8522b29b2",
             "runtime": "nodejs8.10"
           }
         ]
