@@ -364,13 +364,25 @@ function searchTitle(handlerInput) {
         let title = slotValues.title.heardAs;
 
         let searchResult = await jw.search({
-          query: title
+          query: title,
+          page_size: PAGE_SIZE
         });
 
         console.log(`[INFO] searchResult = ${JSON.stringify(searchResult, null, 4)}`);
 
+        const filterMovie = '[.items | .[] | {title, release: .original_release_year, description: .short_description, offers: [(.offers | .[] | select(.monetization_type | contains("rent")))? | {monetization_type, provider_id, presentation_type, retail_price, currency}]}]';
+        const optionsJQ = {
+            input: 'json'
+        }
+
+        let listMovies = await jq.run(filterMovie, searchResult, optionsJQ);
+
+        console.log(`[INFO] listMovie = ${JSON.stringify(listMovies, null, 4)}`);
+
 
         speechText = 'so far so good';
+
+
 
         attributesManager.setPersistentAttributes(pAttrinutes);
         attributesManager.savePersistentAttributes();
