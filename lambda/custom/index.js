@@ -361,28 +361,68 @@ function searchTitle(handlerInput) {
         let slotValues = getSlotValues(request.intent.slots);
 
         // console.log(`[INFO] slotValues = ${JSON.stringify(slotValues, null, 4)}`);
-        let title = slotValues.title.heardAs;
+        let titleValue = slotValues.title.heardAs;
+        console.log(`[INFO] titleValue = ${titleValue}`);
 
         let searchResult = await jw.search({
-          query: title,
+          query: titleValue,
           page_size: PAGE_SIZE
         });
 
-        console.log(`[INFO] searchResult = ${JSON.stringify(searchResult, null, 4)}`);
+        // console.log(`[INFO] searchResult = ${JSON.stringify(searchResult, null, 4)}`);
 
-        const filterMovie = '[.items | .[] | {title, release: .original_release_year, description: .short_description, offers: [(.offers | .[] | select(.monetization_type | contains("rent")))? | {monetization_type, provider_id, presentation_type, retail_price, currency}]}]';
-        const optionsJQ = {
-            input: 'json'
+        let id = JSONQuery('[items].id', {data:searchResult}).value;
+        let title = JSONQuery('[items].title', { data: searchResult }).value;
+        let release = JSONQuery('[items].original_release_year', { data: searchResult }).value;
+        let short_description = JSONQuery('[items].short_description', { data: searchResult }).value;
+
+        let movies = []
+        for (i = 0; (i < PAGE_SIZE); i++) {
+          let item = {
+              id: id[i],
+              title: title[i],
+              release: release[i],
+              description: short_description[i],
+          }
+          let offersList = JSONQuery(`[items][id=${id[i]}].offers`, {data:searchResult}).value;
+          
+          let monetization_type = JSONQuery(`.monetization_type`, {data:offersList}).value;
+          
+          let provider_id = JSONQuery(`.provider_id`, {data:offersList}).value;
+          
+          let presentation_type = JSONQuery(`.presentation_type`, {data:offersList}).value;
+          
+          let retail_price = JSONQuery(`.retail_price`, {data:offersList}).value;
+          
+          let currency = JSONQuery(`.currency`, {data:offersList}).value;
+          
+          let offers = []
+          for (j = 0; (j < offersList.length); j++) {
+              let indOffer = {
+                  provider_id : provider_id[j],
+                  monetization_type : monetization_type[j],
+                  presentation_type : presentation_type[j],
+                  retail_price : retail_price[j],
+                  currency : currency[j]
+              }
+              offers.push(indOffer);
+          }
+  
+          item.offers = offers;
+              
+          movies.push(item)
         }
 
-        let listMovies = await jq.run(filterMovie, searchResult, optionsJQ);
-
-        console.log(`[INFO] listMovie = ${JSON.stringify(listMovies, null, 4)}`);
+        // console.log(`[INFO] movies = ${JSON.stringify(movies, null, 4)}`);
 
 
-        speechText = 'so far so good';
+        speechText = 'Here is the top result: ';
+        
+        let topTitle = movies[0].title;
+        let topRelease = movies[0].release;
+        let topDesc = movies[0].description;
 
-
+        speechText += `${topTitle} from ${topRelease}`;
 
         attributesManager.setPersistentAttributes(pAttrinutes);
         attributesManager.savePersistentAttributes();
@@ -391,54 +431,6 @@ function searchTitle(handlerInput) {
           .speak(speechText)
           .reprompt(reprompt)
           .getResponse());
-        // const { requestEnvelope, responseBuilder, attributesManager } = handlerInput;
-        // const request = requestEnvelope.request;
-
-        // let locale = request.locale.replace('-', '_');
-        // console.log(`[INFO] locale: ${locale}`);
-
-        // let jw = new JustWatch({
-        //   locale: locale
-        // });
-
-        // let sessionAttributes = attributesManager.getSessionAttributes();
-
-
-        // let slotValues = getSlotValues(request.intent.slots);
-        // let titleSlot = slotValues.title.heardAs;
-
-
-        // let searchResult = await jw.search({
-        //   query: titleSlot
-        // });
-
-        // let top5 = [];
-
-        // for (i = 0; i < PAGE_SIZE; i++) {
-        //   top5.push({
-        //     id: searchResult.items[i].id,
-        //     title: searchResult.items[i].title,
-        //     original_release_year: searchResult.items[i].original_release_year,
-        //     short_description: searchResult.items[i].short_description
-        //   })
-        // }
-        // sessionAttributes.top5 = top5;
-        // sessionAttributes.page = 1;
-
-        // let topResult = searchResult.items[0];
-
-        // attributesManager.setSessionAttributes(sessionAttributes);
-
-        // let say = `Here is the top result for ${titleSlot}: `;
-        // say += `${topResult.title} from ${topResult.original_release_year}: ${topResult.short_description} `
-        // reprompt = `Do you want to check where you can watch ${topResult.title}, hear more information about this title or check the other results?`;
-
-        // say += reprompt;
-
-        // return responseBuilder
-        //   .speak(say)
-        //   .reprompt(reprompt)
-        //   .getResponse();
       })
       .catch((error) => {
         console.log(`[ERROR] Error: ${error}`);
