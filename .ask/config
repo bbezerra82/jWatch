@@ -23,7 +23,7 @@
             "codeUri": "lambda/custom",
             "functionName": "justWatch",
             "handler": "index.handler",
-            "revisionId": "bb868343-58c9-43fa-9e70-e22b29e57a18",
+            "revisionId": "a20e15a0-4d59-467b-8a6e-e39909c6f0f5",
             "runtime": "nodejs8.10"
           }
         ]

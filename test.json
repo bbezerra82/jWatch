@@ -3,7 +3,8 @@
   "locale": "en-GB",
   "type": "text",
   "userInput": [
-    "ask just stream to search for reservoir dogs",
+    "open just stream",
+    "search for brave heart",
     "stop"
   ]
 }

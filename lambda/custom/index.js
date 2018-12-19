@@ -8,7 +8,7 @@ const JSONQuery = require("json-query");
 // set up for persistance
 const { DynamoDbPersistenceAdapter } = require('ask-sdk-dynamodb-persistence-adapter');
 const persistenceAdapter = new DynamoDbPersistenceAdapter({
-  tableName: 'Where2Watch',
+  tableName: 'JustStream',
   createTable: true
 });
 
@@ -333,6 +333,10 @@ const SearchIntent_Handler = {
     return request.type === 'IntentRequest' && request.intent.name === 'SearchIntent';
   },
   handle(handlerInput) {
+    const { attributesManager } = handlerInput;
+    let sAttributes = attributesManager.getSessionAttributes();
+    sAttributes.skillState = 'SearchIntent';
+
     return searchTitle(handlerInput);
   },
 };
@@ -346,8 +350,10 @@ function searchTitle(handlerInput) {
         let speechText = '';
         let reprompt = '';
 
+        // set the locale for search
         let locale = pAttrinutes.locale;
 
+        // if locale has not been set, get it from request envelope
         if (typeof locale === 'undefined') {
           locale = request.locale.replace('-', '_');
           pAttrinutes.locale = locale;
@@ -360,9 +366,11 @@ function searchTitle(handlerInput) {
         let slotValues = getSlotValues(request.intent.slots);
 
         // console.log(`[INFO] slotValues = ${JSON.stringify(slotValues, null, 4)}`);
+        // get the title spoken by the user
         let titleValue = slotValues.title.heardAs;
-        console.log(`[INFO] titleValue = ${titleValue}`);
+        // console.log(`[INFO] titleValue = ${titleValue}`);
 
+        // perform the actual search
         let searchResult = await jw.search({
           query: titleValue,
           page_size: PAGE_SIZE
@@ -370,58 +378,44 @@ function searchTitle(handlerInput) {
 
         // console.log(`[INFO] searchResult = ${JSON.stringify(searchResult, null, 4)}`);
 
-        let id = JSONQuery('[items].id', {data:searchResult}).value;
-        let title = JSONQuery('[items].title', { data: searchResult }).value;
-        let release = JSONQuery('[items].original_release_year', { data: searchResult }).value;
-        let short_description = JSONQuery('[items].short_description', { data: searchResult }).value;
+        // get the PAGE_SIZE first results
+        let results = prepareResults(searchResult);
 
-        let movies = []
-        for (i = 0; (i < PAGE_SIZE); i++) {
+        console.log(`[INFO] results = ${JSON.stringify(results, null, 4)}`);
+
+        sAttributes = attributesManager.getSessionAttributes();
+
+        let results = [];
+
+        // store the id of the results for further reference
+        for (i = 0; i < results.length; i++) {
           let item = {
-              id: id[i],
-              title: title[i],
-              release: release[i],
-              description: short_description[i],
+            id = results[i].id,
+            type = results[i].type
           }
-          let offersList = JSONQuery(`[items][id=${id[i]}].offers`, {data:searchResult}).value;
-          
-          let monetization_type = JSONQuery(`.monetization_type`, {data:offersList}).value;
-          
-          let provider_id = JSONQuery(`.provider_id`, {data:offersList}).value;
-          
-          let presentation_type = JSONQuery(`.presentation_type`, {data:offersList}).value;
-          
-          let retail_price = JSONQuery(`.retail_price`, {data:offersList}).value;
-          
-          let currency = JSONQuery(`.currency`, {data:offersList}).value;
-          
-          let offers = []
-          for (j = 0; (j < offersList.length); j++) {
-              let indOffer = {
-                  provider_id : provider_id[j],
-                  monetization_type : monetization_type[j],
-                  presentation_type : presentation_type[j],
-                  retail_price : retail_price[j],
-                  currency : currency[j]
-              }
-              offers.push(indOffer);
-          }
-  
-          item.offers = offers;
-              
-          movies.push(item)
+          results.push(item);
         }
 
-        // console.log(`[INFO] movies = ${JSON.stringify(movies, null, 4)}`);
+        sAttributes.results = results;
 
+        // let results = [];
+        // for (i = 0; (i < PAGE_SIZE); i++) {
+        //   let item = {
+        //     id: id[i],
+        //     title: title[i],
+        //     release: release[i],
+        //     type: type[i],
+        //     description: short_description[i],
+        //   }
+        attributesManager.setSessionAttributes(sAttributes);
 
         speechText = 'Here is the top result: ';
-        
-        let topTitle = movies[0].title;
-        let topRelease = movies[0].release;
-        let topDesc = movies[0].description;
 
-        speechText += `${topTitle} from ${topRelease}`;
+        let topTitle = results[0].title;
+        let topRelease = results[0].release;
+        let topDesc = results[0].description;
+
+        speechText += `${topTitle} from ${topRelease}: ${topDesc} Is this the one you were looking for?`;
 
         attributesManager.setPersistentAttributes(pAttrinutes);
         attributesManager.savePersistentAttributes();
@@ -436,6 +430,51 @@ function searchTitle(handlerInput) {
         reject(error);
       })
   })
+}
+
+function prepareResults(searchResult) {
+  // from the search return, collect the id, tittle, release year and short description
+  let id = JSONQuery('[items].id', { data: searchResult }).value;
+  let title = JSONQuery('[items].title', { data: searchResult }).value;
+  let type = JSONQuery('[items].object_type', { data: searchResult }).value;
+  let release = JSONQuery('[items].original_release_year', { data: searchResult }).value;
+  let short_description = JSONQuery('[items].short_description', { data: searchResult }).value;
+
+  let results = [];
+  for (i = 0; (i < PAGE_SIZE); i++) {
+    let item = {
+      id: id[i],
+      title: title[i],
+      release: release[i],
+      type: type[i],
+      description: short_description[i],
+    }
+
+    // get the offersList, type of service, id of provider, type of presentation, price and currency
+    let offersList = JSONQuery(`[items][id=${id[i]}].offers`, { data: searchResult }).value;
+    let monetization_type = JSONQuery(`.monetization_type`, { data: offersList }).value;
+    let provider_id = JSONQuery(`.provider_id`, { data: offersList }).value;
+    let presentation_type = JSONQuery(`.presentation_type`, { data: offersList }).value;
+    let retail_price = JSONQuery(`.retail_price`, { data: offersList }).value;
+    let currency = JSONQuery(`.currency`, { data: offersList }).value;
+
+    let offers = []
+    for (j = 0; (j < offersList.length); j++) {
+      let indOffer = {
+        provider_id: provider_id[j],
+        monetization_type: monetization_type[j],
+        presentation_type: presentation_type[j],
+        retail_price: retail_price[j],
+        currency: currency[j]
+      }
+      offers.push(indOffer);
+    }
+
+    item.offers = offers;
+
+    results.push(item)
+  }
+  return results;
 }
 
 const MoreIntent_Handler = {
@@ -494,13 +533,16 @@ function startSkill(handlerInput) {
 
         let sAttributes = attributesManager.getSessionAttributes();
 
+        // set locale
         let locale = pAttributes.locale;
 
+        // if locale has not been set yet, get from request envelope
         if (typeof locale === 'undefined') {
           locale = requestEnvelope.request.locale.replace('-', '_');
           pAttributes.locale = locale;
         }
 
+        // collect the favourites
         const { favouritesProviders } = pAttributes;
 
         sAttributes.skillState = 'mainMenu';
@@ -509,6 +551,7 @@ function startSkill(handlerInput) {
         let reprompt = '';
         let favourites = '';
 
+        // if favourites hasn't been set, then ask if user wants to set it
         if (typeof favouritesProviders === 'undefined') {
           // favourites providers not set
           speechText += `It looks like you haven't set your favourite providers yet. You can do so by saying add, followed by the name of up to three providers. Or `
@@ -540,26 +583,25 @@ const AMAZON_YesIntent_Handler = {
     const request = handlerInput.requestEnvelope.request;
     return request.type === 'IntentRequest' && request.intent.name === 'AMAZON.YesIntent';
   },
-  handle(handlerInput) {
+  async handle(handlerInput) {
 
     const { responseBuilder, attributesManager } = handlerInput;
 
-    let sAttributes = attributesManager.getSessionAttributes();
+    const sAttributes = attributesManager.getSessionAttributes();
 
-    let { skillState } = sAttributes;
+    let previousIntent = getPreviousIntent(sAttributes);
 
-    if (skillState === 'mainMenu') {
-      return askFavourites(handlerInput);
-    } else if (skillState === 'readingProviders') {
-      const { attributesManager } = handlerInput;
-      const { providersList, page } = attributesManager.getSessionAttributes();
-      return readPage(handlerInput, providersList, page);
-    } else if (skillState === 'doneReadingProviders') {
-      return whichProviders(handlerInput);
-      return responseBuilder
-        .speak('done for the day')
-        .withShouldEndSession(true)
-        .getResponse();
+    if (previousIntent) {
+      if (previousIntent === 'SearchIntent') {
+        const id = sAttributes.id[0];
+
+        // perform the search
+        let searchResult = await jw.search({
+          query: titleValue,
+          page_size: PAGE_SIZE
+        });
+
+      }
     }
   },
 };
@@ -573,8 +615,6 @@ const AddProvidersIntent_Handler = {
     const { attributesManager } = handlerInput;
 
     let sAttributes = attributesManager.getSessionAttributes();
-
-    sAttributes.skillState = 'addingFavs';
 
     attributesManager.setSessionAttributes(sAttributes);
 
@@ -655,8 +695,6 @@ function askFavourites(handlerInput) {
 
   let sAttributes = attributesManager.getSessionAttributes();
 
-  sAttributes.skillState = 'askFavourites';
-
   let speechText = `Do you want to hear the providers available or do you already know your favourite ones?`;
   let reprompt = `Should I tell you the available ones or do you konw already?`;
 
@@ -720,7 +758,7 @@ function listProviders(handlerInput) {
           }
         }
 
-        sAttributes.skillState = 'readingProviders';
+
         sAttributes.providersList = providersList;
 
         attributesManager.setSessionAttributes(sAttributes);
@@ -1045,6 +1083,104 @@ function shuffleArray(array) {  // Fisher Yates shuffle!
 
   return array;
 }
+
+
+// Session Attributes 
+//   Alexa will track attributes for you, by default only during the lifespan of your session.
+//   The history[] array will track previous request(s), used for contextual Help/Yes/No handling.
+//   Set up DynamoDB persistence to have the skill save and reload these attributes between skill sessions.
+
+function getMemoryAttributes() {
+  const memoryAttributes = {
+    "history": []
+  };
+  return memoryAttributes;
+};
+
+const InitMemoryAttributesInterceptor = {
+  process(handlerInput) {
+    let sessionAttributes = {};
+    if (handlerInput.requestEnvelope.session['new']) {
+
+      sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+
+      let memoryAttributes = getMemoryAttributes();
+
+      if (Object.keys(sessionAttributes).length === 0) {
+
+        Object.keys(memoryAttributes).forEach(function (key) {  // initialize all attributes from global list 
+
+          sessionAttributes[key] = memoryAttributes[key];
+
+        });
+
+      }
+      handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+
+    }
+  }
+};
+
+const RequestHistoryInterceptor = {
+  process(handlerInput) {
+
+    const thisRequest = handlerInput.requestEnvelope.request;
+    let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+
+    let history = sessionAttributes['history'] || [];
+
+    let IntentRequest = {};
+    if (thisRequest.type === 'IntentRequest') {
+
+      let slots = [];
+
+      IntentRequest = {
+        'IntentRequest': thisRequest.intent.name
+      };
+
+      if (thisRequest.intent.slots) {
+
+        for (let slot in thisRequest.intent.slots) {
+          let slotObj = {};
+          slotObj[slot] = thisRequest.intent.slots[slot].value;
+          slots.push(slotObj);
+        }
+
+        IntentRequest = {
+          'IntentRequest': thisRequest.intent.name,
+          'slots': slots
+        };
+
+      }
+
+    } else {
+      IntentRequest = { 'IntentRequest': thisRequest.type };
+    }
+    if (history.length > maxHistorySize - 1) {
+      history.shift();
+    }
+    history.push(IntentRequest);
+
+    handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+  }
+
+};
+
+const maxHistorySize = 10; // remember only latest 10 intents 
+
+function getPreviousIntent(attrs) {
+
+  if (attrs.history && attrs.history.length > 1) {
+    return attrs.history[attrs.history.length - 2].IntentRequest;
+
+  } else {
+    return false;
+  }
+
+}
+
 // 4. Exports handler function and setup ===================================================
 const skillBuilder = Alexa.SkillBuilders.custom();
 exports.handler = skillBuilder
@@ -1075,6 +1211,8 @@ exports.handler = skillBuilder
   )
   .addErrorHandlers(ErrorHandler)
   .withPersistenceAdapter(persistenceAdapter)
+  .addRequestInterceptors(InitMemoryAttributesInterceptor)
+  .addRequestInterceptors(RequestHistoryInterceptor)
   .addResponseInterceptors(function (handlerInput, response) {
     let type = handlerInput.requestEnvelope.request.type;
     let locale = handlerInput.requestEnvelope.request.locale;
