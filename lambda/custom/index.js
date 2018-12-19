@@ -4,7 +4,6 @@
 const Alexa = require("ask-sdk-core");
 const JustWatch = require("justwatch-api");
 const JSONQuery = require("json-query");
-const jq = require("node-jq");
 
 // set up for persistance
 const { DynamoDbPersistenceAdapter } = require('ask-sdk-dynamodb-persistence-adapter');
@@ -13,7 +12,7 @@ const persistenceAdapter = new DynamoDbPersistenceAdapter({
   createTable: true
 });
 
-const skillName = "where to watch";
+const skillName = "just stream";
 
 
 // 1. Intent Handlers =============================================
