@@ -4,6 +4,7 @@
 const Alexa = require("ask-sdk-core");
 const JustWatch = require("justwatch-api");
 const JSONQuery = require("json-query");
+const searchJson = require("./searchJson.js");
 
 // set up for persistance
 const { DynamoDbPersistenceAdapter } = require('ask-sdk-dynamodb-persistence-adapter');
@@ -11,6 +12,14 @@ const persistenceAdapter = new DynamoDbPersistenceAdapter({
   tableName: 'JustStream',
   createTable: true
 });
+
+const ADJECTIVES = [
+  'goto',
+  'best',
+  'amazing',
+  'awesome',
+  'distinctive',
+]
 
 const skillName = "just stream";
 
@@ -60,26 +69,6 @@ const AMAZON_HelpIntent_Handler = {
     // say +=  'I understand  ' + intents.length + ' intents, '
 
     say += ' Here something you can ask me, ' + getSampleUtterance(sampleIntent);
-
-    return responseBuilder
-      .speak(say)
-      .reprompt('try again, ' + say)
-      .getResponse();
-  },
-};
-
-const AMAZON_MoreIntent_Handler = {
-  canHandle(handlerInput) {
-    const request = handlerInput.requestEnvelope.request;
-    return request.type === 'IntentRequest' && request.intent.name === 'AMAZON.MoreIntent';
-  },
-  handle(handlerInput) {
-    const request = handlerInput.requestEnvelope.request;
-    const responseBuilder = handlerInput.responseBuilder;
-    let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-    let say = 'Hello from AMAZON.MoreIntent. ';
-
 
     return responseBuilder
       .speak(say)
@@ -341,97 +330,6 @@ const SearchIntent_Handler = {
   },
 };
 
-function searchTitle(handlerInput) {
-  return new Promise((resolve, reject) => {
-    const { responseBuilder, attributesManager, requestEnvelope } = handlerInput;
-    attributesManager.getPersistentAttributes()
-      .then(async (pAttrinutes) => {
-        const request = requestEnvelope.request;
-        let speechText = '';
-        let reprompt = '';
-
-        // set the locale for search
-        let locale = pAttrinutes.locale;
-
-        // if locale has not been set, get it from request envelope
-        if (typeof locale === 'undefined') {
-          locale = request.locale.replace('-', '_');
-          pAttrinutes.locale = locale;
-        }
-
-        let jw = new JustWatch({
-          locale: locale
-        });
-
-        let slotValues = getSlotValues(request.intent.slots);
-
-        // console.log(`[INFO] slotValues = ${JSON.stringify(slotValues, null, 4)}`);
-        // get the title spoken by the user
-        let titleValue = slotValues.title.heardAs;
-        // console.log(`[INFO] titleValue = ${titleValue}`);
-
-        // perform the actual search
-        let searchResult = await jw.search({
-          query: titleValue,
-          page_size: PAGE_SIZE
-        });
-
-        // console.log(`[INFO] searchResult = ${JSON.stringify(searchResult, null, 4)}`);
-
-        // get the PAGE_SIZE first results
-        let results = prepareResults(searchResult);
-
-        console.log(`[INFO] results = ${JSON.stringify(results, null, 4)}`);
-
-        sAttributes = attributesManager.getSessionAttributes();
-
-        let results = [];
-
-        // store the id of the results for further reference
-        for (i = 0; i < results.length; i++) {
-          let item = {
-            id = results[i].id,
-            type = results[i].type
-          }
-          results.push(item);
-        }
-
-        sAttributes.results = results;
-
-        // let results = [];
-        // for (i = 0; (i < PAGE_SIZE); i++) {
-        //   let item = {
-        //     id: id[i],
-        //     title: title[i],
-        //     release: release[i],
-        //     type: type[i],
-        //     description: short_description[i],
-        //   }
-        attributesManager.setSessionAttributes(sAttributes);
-
-        speechText = 'Here is the top result: ';
-
-        let topTitle = results[0].title;
-        let topRelease = results[0].release;
-        let topDesc = results[0].description;
-
-        speechText += `${topTitle} from ${topRelease}: ${topDesc} Is this the one you were looking for?`;
-
-        attributesManager.setPersistentAttributes(pAttrinutes);
-        attributesManager.savePersistentAttributes();
-
-        resolve(responseBuilder
-          .speak(speechText)
-          .reprompt(reprompt)
-          .getResponse());
-      })
-      .catch((error) => {
-        console.log(`[ERROR] Error: ${error}`);
-        reject(error);
-      })
-  })
-}
-
 function prepareResults(searchResult) {
   // from the search return, collect the id, tittle, release year and short description
   let id = JSONQuery('[items].id', { data: searchResult }).value;
@@ -450,61 +348,36 @@ function prepareResults(searchResult) {
       description: short_description[i],
     }
 
-    // get the offersList, type of service, id of provider, type of presentation, price and currency
+    // get the offersList
     let offersList = JSONQuery(`[items][id=${id[i]}].offers`, { data: searchResult }).value;
-    let monetization_type = JSONQuery(`.monetization_type`, { data: offersList }).value;
-    let provider_id = JSONQuery(`.provider_id`, { data: offersList }).value;
-    let presentation_type = JSONQuery(`.presentation_type`, { data: offersList }).value;
-    let retail_price = JSONQuery(`.retail_price`, { data: offersList }).value;
-    let currency = JSONQuery(`.currency`, { data: offersList }).value;
 
-    let offers = []
-    for (j = 0; (j < offersList.length); j++) {
-      let indOffer = {
-        provider_id: provider_id[j],
-        monetization_type: monetization_type[j],
-        presentation_type: presentation_type[j],
-        retail_price: retail_price[j],
-        currency: currency[j]
+    // if offersList is not undefined, get the type of service, id of provider, type of presentation, price and currency
+    if (typeof offersList != 'undefined') {
+      let monetization_type = JSONQuery(`.monetization_type`, { data: offersList }).value;
+      let provider_id = JSONQuery(`.provider_id`, { data: offersList }).value;
+      let presentation_type = JSONQuery(`.presentation_type`, { data: offersList }).value;
+      let retail_price = JSONQuery(`.retail_price`, { data: offersList }).value;
+      let currency = JSONQuery(`.currency`, { data: offersList }).value;
+      let offers = []
+
+      for (j = 0; (j < offersList.length); j++) {
+        let indOffer = {
+          provider_id: provider_id[j],
+          monetization_type: monetization_type[j],
+          presentation_type: presentation_type[j],
+          retail_price: retail_price[j],
+          currency: currency[j]
+        }
+        offers.push(indOffer);
       }
-      offers.push(indOffer);
+
+      item.offers = offers;
+
+      results.push(item)
+      // console.log(`[INFO] results: ${JSON.stringify(results, null, 4)}`)
     }
-
-    item.offers = offers;
-
-    results.push(item)
   }
   return results;
-}
-
-const MoreIntent_Handler = {
-  canHandle(handlerInput) {
-    const request = handlerInput.requestEnvelope.request;
-    return request.type === 'IntentRequest' && request.intent.name === 'MoreIntent';
-  },
-  handle(handlerInput) {
-
-  }
-}
-
-const DescriptionIntent_Handler = {
-  canHandle(handlerInput) {
-    const request = handlerInput.requestEnvelope.request;
-    return request.type === 'IntentRequest' && request.intent.name === 'DescriptionIntent';
-  },
-  handle(handlerInput) {
-    const { responseBuilder, attributesManager } = handlerInput;
-
-    let sessionAttributes = attributesManager.getSessionAttributes();
-
-    let description = sessionAttributes.topResult.short_description;
-
-    console.log(`[INFO] description: ${description}.`);
-
-    return responseBuilder
-      .speak(description)
-      .getResponse();
-  }
 }
 
 const LaunchRequest_Handler = {
@@ -516,14 +389,6 @@ const LaunchRequest_Handler = {
     return startSkill(handlerInput);
   },
 };
-
-const ADJECTIVES = [
-  'goto',
-  'best',
-  'amazing',
-  'awesome',
-  'distinctive',
-]
 
 function startSkill(handlerInput) {
   return new Promise((resolve, reject) => {
@@ -552,14 +417,14 @@ function startSkill(handlerInput) {
         let favourites = '';
 
         // if favourites hasn't been set, then ask if user wants to set it
-        if (typeof favouritesProviders === 'undefined') {
-          // favourites providers not set
-          speechText += `It looks like you haven't set your favourite providers yet. You can do so by saying add, followed by the name of up to three providers. Or `
-          favourites += `Or tell me which providers to add to your favourites list.`
-          // reprompt += `Do you want to set your favourites providers now?`
-        }
+        // if (typeof favouritesProviders === 'undefined') {
+        //   // favourites providers not set
+        //   speechText += `It looks like you haven't set your favourite providers yet. You can do so by saying add, followed by the name of up to three providers. Or `
+        //   favourites += `Or tell me which providers to add to your favourites list.`
+        //   // reprompt += `Do you want to set your favourites providers now?`
+        // }
 
-        speechText += `just ask me to search for a movie or TV show.`;
+        speechText += `Just ask me to search for a movie or TV show and I will let you know in which service you can stream it, rent it or buyt it.`;
         reprompt += `What movie or TV show do you want to watch? ${favourites}`
 
         attributesManager.setSessionAttributes(sAttributes);
@@ -585,7 +450,7 @@ const AMAZON_YesIntent_Handler = {
   },
   async handle(handlerInput) {
 
-    const { responseBuilder, attributesManager } = handlerInput;
+    const { attributesManager } = handlerInput;
 
     const sAttributes = attributesManager.getSessionAttributes();
 
@@ -593,18 +458,279 @@ const AMAZON_YesIntent_Handler = {
 
     if (previousIntent) {
       if (previousIntent === 'SearchIntent') {
-        const id = sAttributes.id[0];
+        return getDetails(handlerInput)
+      }
+    }
+  },
+};
 
-        // perform the search
+const AMAZON_NoIntent_Handler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest' && request.intent.name === 'AMAZON.NoIntent';
+  },
+  handle(handlerInput) {
+    const { attributesManager, responseBuilder } = handlerInput;
+    const sAttributes = attributesManager.getSessionAttributes();
+
+    let previousIntent = getPreviousIntent(sAttributes);
+    let say = '';
+
+    if (previousIntent === 'SearchIntent') {
+      say = `If you want to hear more results, say more. If you want to search for another title, just ask me to search for it.`;
+      
+      return responseBuilder
+      .speak(say)
+      .withShouldEndSession(false)
+      .getResponse();
+    }
+  },
+};
+
+const AMAZON_MoreIntent_Handler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest' && request.intent.name === 'AMAZON.MoreIntent';
+  },
+  handle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    const responseBuilder = handlerInput.responseBuilder;
+    let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+
+    let say = 'Hello from AMAZON.MoreIntent. ';
+
+
+    return responseBuilder
+      .speak(say)
+      .reprompt('try again, ' + say)
+      .getResponse();
+  },
+};
+
+function readNextResult(handlerInput) {
+  const { attributesManager, responseBuilder } = handlerInput;
+  const sAttributes = attributesManager.getSessionAttributes();
+
+  const results = sAttributes.results;
+  const lastRead = sAttributes.lastRead;
+
+  console.log(`[INFO] results: ${JSON.stringify(results)}`);
+  console.log(`[INFO] lastRead: ${lastRead}`);
+  let say = 'so far so good';
+
+  return responseBuilder
+    .speak(say)
+    .getResponse();
+  
+}
+
+function searchTitle(handlerInput) {
+  return new Promise((resolve, reject) => {
+    const { responseBuilder, attributesManager, requestEnvelope } = handlerInput;
+    attributesManager.getPersistentAttributes()
+      .then(async (pAttributes) => {
+        const request = requestEnvelope.request;
+        let speechText = '';
+        let reprompt = '';
+
+        // set the locale for search
+        let locale = pAttributes.locale;
+
+        // if locale has not been set, get it from request envelope
+        if (typeof locale === 'undefined') {
+          locale = request.locale.replace('-', '_');
+          pAttributes.locale = locale;
+        }
+
+        let jw = new JustWatch({
+          locale: locale
+        });
+
+        let slotValues = getSlotValues(request.intent.slots);
+
+        // console.log(`[INFO] slotValues = ${JSON.stringify(slotValues, null, 4)}`);
+        // get the title spoken by the user
+        let titleValue = slotValues.title.heardAs;
+        // console.log(`[INFO] titleValue = ${titleValue}`);
+
+        // perform the actual search
         let searchResult = await jw.search({
           query: titleValue,
           page_size: PAGE_SIZE
         });
 
-      }
+        // console.log(`[INFO] searchResult = ${JSON.stringify(searchResult, null, 4)}`);
+
+        // get the PAGE_SIZE first results
+        let searchResults = prepareResults(searchResult);
+
+        console.log(`[INFO] searchResults = ${JSON.stringify(searchResults, null, 4)}`);
+
+        sAttributes = attributesManager.getSessionAttributes();
+
+        let results = [];
+
+        // store the id of the results for further reference
+        for (i = 0; i < searchResults.length; i++) {
+          let item = {
+            id: searchResults[i].id,
+            type: searchResults[i].type
+          }
+          results.push(item);
+        }
+
+        sAttributes.results = results;
+
+        speechText = 'Here is the top result: ';
+
+        let topTitle = searchResults[0].title;
+        let topRelease = searchResults[0].release;
+        let topDesc = searchResults[0].description;
+
+        speechText += `${topTitle} from ${topRelease}: ${topDesc} Is this the one you were looking for?`;
+        
+        sAttributes.lastRead = 0;
+
+        attributesManager.setSessionAttributes(sAttributes);
+
+        attributesManager.setPersistentAttributes(pAttributes);
+        attributesManager.savePersistentAttributes();
+
+        resolve(responseBuilder
+          .speak(speechText)
+          .reprompt(reprompt)
+          .getResponse());
+      })
+      .catch((error) => {
+        console.log(`[ERROR] Error: ${error}`);
+        reject(error);
+      })
+  })
+}
+
+async function getDetails(handlerInput) {
+  return new Promise((resolve, reject) => {
+    const { attributesManager, responseBuilder } = handlerInput;
+    attributesManager.getPersistentAttributes()
+      .then(async (pAttributes) => {
+        let speechText = '';
+        const sAttributes = attributesManager.getSessionAttributes();
+
+        // set the locale for search
+        let locale = pAttributes.locale;
+
+        // if locale has not been set, get it from request envelope
+        if (typeof locale === 'undefined') {
+          locale = request.locale.replace('-', '_');
+          pAttributes.locale = locale;
+        }
+
+        const id = sAttributes.results[0].id;
+        const type = sAttributes.results[0].type;
+
+        let jw = new JustWatch({
+          locale: locale
+        });
+
+        let providers = await jw.getProviders();
+        // console.log(`[INFO] providers: ${JSON.stringify(providers, null, 4)}`)
+
+        let searchResult = await jw.getTitle(type, id);
+
+        let monetization_type = JSONQuery(`offers.monetization_type`, { data: searchResult }).value;
+        let provider_id = JSONQuery(`offers.provider_id`, { data: searchResult }).value;
+        let presentation_type = JSONQuery(`offers.presentation_type`, { data: searchResult }).value;
+        let retail_price = JSONQuery(`offers.retail_price`, { data: searchResult }).value;
+        let currency = JSONQuery(`offers.currency`, { data: searchResult }).value;
+
+        let buy = [];
+        let cinema = [];
+        let flatrate = [];
+        let rent = [];
+
+        for (i = 0; i < searchResult.offers.length; i++) {
+          let item = {
+            provider_id: provider_id[i],
+            monetization_type: monetization_type[i],
+            presentation_type: presentation_type[i],
+            retail_price: retail_price[i],
+            currency: currency[i]
+          }
+          switch (monetization_type[i]) {
+            case 'buy':
+              buy.push(item);
+              break;
+            case 'cinema':
+              cinema.push(item);
+              break;
+            case 'flatrate':
+              flatrate.push(item);
+              break;
+            case 'rent':
+              rent.push(item);
+              break;
+            default:
+              console.log('[ERROR] switch/case failed');
+              break;
+          }
+        }
+
+        if (flatrate.length !== 0) {
+          speechText += `You can stream it on `;
+          speechText += readProviders(providers, flatrate);
+        }
+
+        if (rent.length !== 0) {
+          speechText += `You can rent it on `;
+          speechText += readProviders(providers, rent);
+        }
+
+        if (buy.length != 0) {
+          speechText += `You can buy it on `;
+          speechText += readProviders(providers, buy);
+        }
+
+        resolve(responseBuilder
+          .speak(speechText)
+          .getResponse());
+      })
+      .catch((error) => {
+        console.log(`[ERROR] Error: ${error}`);
+        reject(error);
+      });
+  })
+}
+
+function readProviders(providers, set) {
+  let names = [];
+  let ids = [];
+  let output = '';
+  let name = '';
+  for (i = 0; i < set.length; i++) {
+    let pid = set[i].provider_id;
+    if (ids.indexOf(pid) < 0) {
+      name = searchJson.getValues(searchJson.getObjects(providers, 'id', pid), 'clear_name');
+      names.push(name);
+      ids.push(pid);
     }
-  },
-};
+  }
+
+  for (i = 0; i < names.length; i++) {
+    output += `${names[i]}${punctuation(i, names.length)}`;
+  }
+  return output;
+}
+
+function punctuation(index, length) {
+  console.log(`[INFO] index: ${index} | length: ${length}`)
+  if (index + 2 === length) {
+    return ` and `;
+  } else if (index + 1 !== length) {
+    return `, `;
+  } else {
+    return `. `;
+  }
+}
 
 const AddProvidersIntent_Handler = {
   canHandle(handlerInput) {
@@ -816,30 +942,6 @@ function readPage(handlerInput, toRead, page) {
     .getResponse();
 }
 
-const AMAZON_NoIntent_Handler = {
-  canHandle(handlerInput) {
-    const request = handlerInput.requestEnvelope.request;
-    return request.type === 'IntentRequest' && request.intent.name === 'AMAZON.NoIntent';
-  },
-  handle(handlerInput) {
-    const request = handlerInput.requestEnvelope.request;
-    const responseBuilder = handlerInput.responseBuilder;
-    let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-    let say = 'You said No. ';
-    let previousIntent = getPreviousIntent(sessionAttributes);
-
-    if (previousIntent && !handlerInput.requestEnvelope.session.new) {
-      say += 'Your last intent was ' + previousIntent + '. ';
-    }
-
-    return responseBuilder
-      .speak(say)
-      .reprompt('try again, ' + say)
-      .getResponse();
-  },
-};
-
 const SessionEndedHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
@@ -895,9 +997,6 @@ function randomElement(myArray) {
 function stripSpeak(str) {
   return (str.replace('<speak>', '').replace('</speak>', ''));
 }
-
-
-
 
 function getSlotValues(filledSlots) {
   const slotValues = {};
@@ -1202,9 +1301,9 @@ exports.handler = skillBuilder
     AMAZON_ScrollRightIntent_Handler,
     AMAZON_ScrollUpIntent_Handler,
     AMAZON_StopIntent_Handler,
-    SearchIntent_Handler,
-    // DescriptionIntent_Handler,
     LaunchRequest_Handler,
+    SearchIntent_Handler,
+    DescriptionIntent_Handler,
     TellMeProvidersIntent_Handler,
     AddProvidersIntent_Handler,
     SessionEndedHandler

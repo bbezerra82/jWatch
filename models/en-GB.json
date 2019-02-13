@@ -13,7 +13,9 @@
                 },
                 {
                     "name": "AMAZON.MoreIntent",
-                    "samples": []
+                    "samples": [
+                        "more"
+                    ]
                 },
                 {
                     "name": "AMAZON.NavigateSettingsIntent",
