@@ -600,7 +600,7 @@ function searchTitle(handlerInput) {
 
         speechText = 'Here is the top result: ';
 
-        const topResult = readResult(searchResults, attributesManager);
+        const topResult = readResult(results[0], attributesManager);
 
         speechText += `${topResult.title} from ${topResult.release}: ${topResult.description} Is this the one you were looking for?`;
 
@@ -621,7 +621,7 @@ function searchTitle(handlerInput) {
   })
 }
 
-function readResult(searchResults, attributesManager) {
+async function readResult(result, attributesManager) {
   let sAttributes = attributesManager.getSessionAttributes();
   let nextRead = sAttributes.nextRead;
 
@@ -631,10 +631,12 @@ function readResult(searchResults, attributesManager) {
     nextRead++;
   }
 
+  const searchResult = await jw.getTitle(result.type, result.id);
+
   let result = {};
   result.title = searchResults[nextRead].title;
-  result.release = searchResults[nextRead].release;
-  result.description = searchResults[nextRead].description;
+  result.release = searchResults[nextRead].original_release_year;
+  result.description = searchResults[nextRead].short_description;
 
   sAttributes.nextRead = nextRead;
   attributesManager.setSessionAttributes(sAttributes);
