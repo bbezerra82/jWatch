@@ -3,8 +3,9 @@
   "locale": "en-GB",
   "type": "text",
   "userInput": [
-    "ask just stream to search for heat",
-    "yes",
+    "ask just stream to search for amadeus",
+    "no",
+    "more",
     "stop"
   ]
 }
