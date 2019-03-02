@@ -1,6 +1,6 @@
 {
   "deploy_settings": {
-    "gabi": {
+    "default": {
       "skill_id": "amzn1.ask.skill.391c4047-b93b-45ec-9d15-1fcf71821dc3",
       "was_cloned": false,
       "merge": {},
@@ -23,7 +23,7 @@
             "codeUri": "lambda/custom",
             "functionName": "justWatch",
             "handler": "index.handler",
-            "revisionId": "b73f4e2d-0d4d-4a82-a840-753ebfaa5694",
+            "revisionId": "9abbfd85-526d-4b25-8b72-a2f83e05edcb",
             "runtime": "nodejs8.10"
           }
         ]

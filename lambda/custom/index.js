@@ -547,6 +547,7 @@ function searchTitle(handlerInput) {
     attributesManager.getPersistentAttributes()
       .then(async (pAttributes) => {
         const request = requestEnvelope.request;
+        sAttributes = attributesManager.getSessionAttributes();
         let speechText = '';
         let reprompt = '';
 
@@ -583,8 +584,6 @@ function searchTitle(handlerInput) {
 
         // console.log(`[INFO] searchResults = ${JSON.stringify(searchResults, null, 4)}`);
 
-        sAttributes = attributesManager.getSessionAttributes();
-
         let results = [];
 
         // store the id of the results for further reference
@@ -600,7 +599,8 @@ function searchTitle(handlerInput) {
 
         speechText = 'Here is the top result: ';
 
-        const topResult = readResult(results[0], attributesManager);
+        const topResult = await readResult(results, handlerInput);
+        // console.log(`[INFO] topResult = ${JSON.stringify(topResult, null, 4)}`);
 
         speechText += `${topResult.title} from ${topResult.release}: ${topResult.description} Is this the one you were looking for?`;
 
@@ -619,29 +619,6 @@ function searchTitle(handlerInput) {
         reject(error);
       })
   })
-}
-
-async function readResult(result, attributesManager) {
-  let sAttributes = attributesManager.getSessionAttributes();
-  let nextRead = sAttributes.nextRead;
-
-  if (nextRead === undefined) {
-    nextRead = 0;
-  } else {
-    nextRead++;
-  }
-
-  const searchResult = await jw.getTitle(result.type, result.id);
-
-  let result = {};
-  result.title = searchResults[nextRead].title;
-  result.release = searchResults[nextRead].original_release_year;
-  result.description = searchResults[nextRead].short_description;
-
-  sAttributes.nextRead = nextRead;
-  attributesManager.setSessionAttributes(sAttributes);
-
-  return result;
 }
 
 function prepareResults(searchResult) {
@@ -694,26 +671,57 @@ function prepareResults(searchResult) {
   return results;
 }
 
-function getNextResults(handlerInput) {
+function readResult(results, handlerInput) {
   return new Promise((resolve, reject) => {
-    const { attributesManager, requestEnvelope, responseBuilder } = handlerInput;
+    const { attributesManager, requestEnvelope } = handlerInput;
     attributesManager.getPersistentAttributes()
       .then(async (pAttributes) => {
+        let sAttributes = attributesManager.getSessionAttributes();
+        let nextRead = sAttributes.nextRead;
+        let locale = pAttributes.locale;
 
-        const locale = pAttributes.locale;
-
-        if (typeof locale === undefined) {
-          locale = requestEnvelope.request.replace('-', '_');
-          pAttributes.locale = locale;;
+        if (typeof nextRead === 'undefined') {
+          nextRead = 0;
+        } else {
+          nextRead++;
         }
 
-        resolve(getDetails(handlerInput));
+        if (typeof locale === 'undefined') {
+          locale = requestEnvelope.request.locale.replace('-', '_');
+          pAttributes.locale = locale;
+        }
+
+        let jw = new JustWatch({
+          locale: locale
+        });
+
+        const searchResult = await jw.getTitle(results[nextRead].type, results[nextRead].id);
+        // console.log(`[INFO] searchResult: ${JSON.stringify(searchResult)}`);
+
+        let resultJson = {};
+        resultJson.title = searchResult.title;
+        resultJson.release = searchResult.original_release_year;
+        resultJson.description = searchResult.short_description;
+        console.log(`[INFO] resultJson: ${JSON.stringify(resultJson)}`);
+
+        sAttributes.nextRead = nextRead;
+
+        attributesManager.setSessionAttributes(sAttributes);
+
+        attributesManager.setPersistentAttributes(pAttributes);
+        attributesManager.savePersistentAttributes();
+
+        resolve(resultJson);
       })
       .catch((error) => {
         console.log(`[ERROR] Error: ${error}`);
-        reject(error_)
+        reject(error);
       })
   })
+}
+
+function getNextResults(handlerInput) {
+  
 }
 
 async function getDetails(handlerInput) {
@@ -1200,6 +1208,13 @@ const ResponsePersistenceInterceptor = {
 
   }
 };
+
+function getSpeakableListOfProducts(entitleProductsList) {
+  const productNameList = entitleProductsList.map(item => item.name);
+  let productListSpeech = productNameList.join(', '); // Generate a single string with comma separated product names
+  productListSpeech = productListSpeech.replace(/_([^_]*)$/, 'and $1'); // Replace last comma with an 'and '
+  return productListSpeech;
+}
 
 
 function shuffleArray(array) {  // Fisher Yates shuffle! 
