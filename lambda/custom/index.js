@@ -23,6 +23,8 @@ const ADJECTIVES = [
 
 const skillName = "just stream";
 
+let JW;
+
 // Session Attributes 
 //   Alexa will track attributes for you, by default only during the lifespan of your session.
 //   The history[] array will track previous request(s), used for contextual Help/Yes/No handling.
@@ -180,9 +182,9 @@ const AMAZON_NoIntent_Handler = {
     const previousIntent = getPreviousIntent(sAttributes);
     let say = '';
 
-    if (previousIntent === 'SearchIntent') {
+    if (previousIntent === 'SearchIntent' || previousIntent === 'MoreIntent') {
       say = `If you want to hear more results, say more. If you want to search for another title, just ask me to search for it.`;
-      
+
       return responseBuilder
         .speak(say)
         // .withShouldEndSession(false)
@@ -205,7 +207,7 @@ const AMAZON_YesIntent_Handler = {
     let previousIntent = getPreviousIntent(sAttributes);
 
     if (previousIntent) {
-      if (previousIntent === 'SearchIntent') {
+      if (previousIntent === 'SearchIntent' || previousIntent === 'MoreIntent') {
         return getDetails(handlerInput)
       }
     }
@@ -417,7 +419,6 @@ const MoreIntent_Handler = {
     return request.type === 'IntentRequest' && request.intent.name === 'MoreIntent';
   },
   handle(handlerInput) {
-
     return getNextResults(handlerInput);
   },
 };
@@ -428,7 +429,7 @@ const SearchIntent_Handler = {
     return request.type === 'IntentRequest' && request.intent.name === 'SearchIntent';
   },
   handle(handlerInput) {
-    const { attributesManager,  } = handlerInput;
+    const { attributesManager, } = handlerInput;
     let sAttributes = attributesManager.getSessionAttributes();
     sAttributes.skillState = 'SearchIntent';
 
@@ -452,7 +453,12 @@ const SessionEndedHandler = {
     return request.type === 'SessionEndedRequest';
   },
   handle(handlerInput) {
-    console.log(`Session ended with reason: ${handlerInput.requestEnvelope.request.reason}`);
+    const request = handlerInput.requestEnvelope.request;
+    console.log(`[INFO] Session ended with reason: ${request.reason}`);
+    if (request.reason === 'ERROR') {
+      console.log(`[ERROR] ${request.error.type}: ${request.error.message}`)
+    }
+    
     return handlerInput.responseBuilder.getResponse();
   }
 };
@@ -488,22 +494,46 @@ const PAGE_SIZE = 5;
 
 // 3.  Helper Functions ===================================================================
 
+function initJw(handlerInput) {
+  if (!isJwInit()) {
+    return new Promise((resolve, reject) => {
+      handlerInput.attributesManager.getPersistentAttributes()
+        .then((pAttributes) => {
+          if (typeof JW === 'undefined') {
+            const { requestEnvelope } = handlerInput;
+            const locale = pAttributes.locale;
+
+            if (typeof locale === 'undefined') {
+              locale = requestEnvelope.request.locale.replace('-', '_');
+              pAttributes.locale = locale;
+            }
+            JW = new JustWatch({
+              locale: locale
+            });
+          }
+          resolve();
+        })
+        .catch((error) => {
+          console.log(`[ERROR] Error: ${error}`);
+          reject(error);
+        })
+    })
+  }
+}
+
+function isJwInit() {
+  return !(typeof JW === 'undefined')
+}
+
 function startSkill(handlerInput) {
   return new Promise((resolve, reject) => {
     handlerInput.attributesManager.getPersistentAttributes()
-      .then((pAttributes) => {
-        const { responseBuilder, attributesManager, requestEnvelope } = handlerInput;
+      .then(async (pAttributes) => {
+        const { responseBuilder, attributesManager } = handlerInput;
 
         let sAttributes = attributesManager.getSessionAttributes();
 
-        // set locale
-        let locale = pAttributes.locale;
-
-        // if locale has not been set yet, get from request envelope
-        if (typeof locale === undefined) {
-          locale = requestEnvelope.request.locale.replace('-', '_');
-          pAttributes.locale = locale;
-        }
+        await initJw(handlerInput);
 
         // collect the favourites
         const { favouritesProviders } = pAttributes;
@@ -515,7 +545,7 @@ function startSkill(handlerInput) {
         let favourites = '';
 
         // if favourites hasn't been set, then ask if user wants to set it
-        // if (typeof favouritesProviders === undefined) {
+        // if (typeof favouritesProviders === 'undefined') {
         //   // favourites providers not set
         //   speechText += `It looks like you haven't set your favourite providers yet. You can do so by saying add, followed by the name of up to three providers. Or `
         //   favourites += `Or tell me which providers to add to your favourites list.`
@@ -541,285 +571,218 @@ function startSkill(handlerInput) {
   });
 }
 
-function searchTitle(handlerInput) {
-  return new Promise((resolve, reject) => {
-    const { responseBuilder, attributesManager, requestEnvelope } = handlerInput;
-    attributesManager.getPersistentAttributes()
-      .then(async (pAttributes) => {
-        const request = requestEnvelope.request;
-        sAttributes = attributesManager.getSessionAttributes();
-        let speechText = '';
-        let reprompt = '';
+async function searchTitle(handlerInput) {
+  const { responseBuilder, attributesManager, requestEnvelope } = handlerInput;
 
-        // set the locale for search
-        let locale = pAttributes.locale;
+  const request = requestEnvelope.request;
+  const sAttributes = attributesManager.getSessionAttributes();
+  let speechText = '';
+  let reprompt = '';
 
-        // if locale has not been set, get it from request envelope
-        if (typeof locale === undefined) {
-          locale = request.locale.replace('-', '_');
-          pAttributes.locale = locale;
-        }
+  await initJw(handlerInput);
 
-        let jw = new JustWatch({
-          locale: locale
-        });
+  const slotValues = getSlotValues(request.intent.slots);
 
-        let slotValues = getSlotValues(request.intent.slots);
+  // get the title spoken by the user
+  const titleValue = slotValues.title.heardAs;
+  // console.log(`[INFO] titleValue = ${titleValue}`);
 
-        // console.log(`[INFO] slotValues = ${JSON.stringify(slotValues, null, 4)}`);
-        // get the title spoken by the user
-        let titleValue = slotValues.title.heardAs;
-        // console.log(`[INFO] titleValue = ${titleValue}`);
+  // perform the actual search
+  let searchResult = await JW.search({
+    query: titleValue,
+    // page_size: PAGE_SIZE
+  });
 
-        // perform the actual search
-        let searchResult = await jw.search({
-          query: titleValue,
-          page_size: PAGE_SIZE
-        });
+  // get the only the id and type of the results
+  const searchResults = prepareResults(searchResult);
 
-        // console.log(`[INFO] searchResult = ${JSON.stringify(searchResult, null, 4)}`);
+  // let results = [];
 
-        // get the PAGE_SIZE first results
-        let searchResults = prepareResults(searchResult);
+  // // store the id of the results for further reference
+  // for (i = 0; i < searchResults.length; i++) {
+  //   let item = {
+  //     id: searchResults[i].id,
+  //     type: searchResults[i].type
+  //   }
+  //   results.push(item);
+  // }
 
-        // console.log(`[INFO] searchResults = ${JSON.stringify(searchResults, null, 4)}`);
+  sAttributes.results = searchResults;
 
-        let results = [];
+  speechText = 'Here is the top result: ';
 
-        // store the id of the results for further reference
-        for (i = 0; i < searchResults.length; i++) {
-          let item = {
-            id: searchResults[i].id,
-            type: searchResults[i].type
-          }
-          results.push(item);
-        }
+  const topResult = await readResult(searchResults, handlerInput);
+  console.log(`[INFO] topResult: ${JSON.stringify(topResult)}`);
 
-        sAttributes.results = results;
+  speechText += `${topResult.title} from ${topResult.release}: ${topResult.description} Is this the one you were looking for?`;
+  speechText = speechText.replace('&', 'and');
 
-        speechText = 'Here is the top result: ';
+  attributesManager.setSessionAttributes(sAttributes);
 
-        const topResult = await readResult(results, handlerInput);
-        // console.log(`[INFO] topResult = ${JSON.stringify(topResult, null, 4)}`);
-
-        speechText += `${topResult.title} from ${topResult.release}: ${topResult.description} Is this the one you were looking for?`;
-
-        attributesManager.setSessionAttributes(sAttributes);
-
-        attributesManager.setPersistentAttributes(pAttributes);
-        attributesManager.savePersistentAttributes();
-
-        resolve(responseBuilder
-          .speak(speechText)
-          .reprompt(reprompt)
-          .getResponse());
-      })
-      .catch((error) => {
-        console.log(`[ERROR] Error: ${error}`);
-        reject(error);
-      })
-  })
+  return responseBuilder
+  .speak(speechText)
+  .reprompt(reprompt)
+  .getResponse();
 }
 
 function prepareResults(searchResult) {
   // from the search return, collect the id, tittle, release year and short description
   let id = JSONQuery('[items].id', { data: searchResult }).value;
-  let title = JSONQuery('[items].title', { data: searchResult }).value;
   let type = JSONQuery('[items].object_type', { data: searchResult }).value;
-  let release = JSONQuery('[items].original_release_year', { data: searchResult }).value;
-  let short_description = JSONQuery('[items].short_description', { data: searchResult }).value;
 
   let results = [];
-  for (i = 0; (i < PAGE_SIZE); i++) {
+  for (i = 0; (i < id.length); i++) {
     let item = {
       id: id[i],
-      title: title[i],
-      release: release[i],
       type: type[i],
-      description: short_description[i],
     }
-
-    // get the offersList
-    let offersList = JSONQuery(`[items][id=${id[i]}].offers`, { data: searchResult }).value;
-
-    // if offersList is not undefined, get the type of service, id of provider, type of presentation, price and currency
-    if (typeof offersList != undefined) {
-      let monetization_type = JSONQuery(`.monetization_type`, { data: offersList }).value;
-      let provider_id = JSONQuery(`.provider_id`, { data: offersList }).value;
-      let presentation_type = JSONQuery(`.presentation_type`, { data: offersList }).value;
-      let retail_price = JSONQuery(`.retail_price`, { data: offersList }).value;
-      let currency = JSONQuery(`.currency`, { data: offersList }).value;
-      let offers = []
-
-      for (j = 0; (j < offersList.length); j++) {
-        let indOffer = {
-          provider_id: provider_id[j],
-          monetization_type: monetization_type[j],
-          presentation_type: presentation_type[j],
-          retail_price: retail_price[j],
-          currency: currency[j]
-        }
-        offers.push(indOffer);
-      }
-
-      item.offers = offers;
-
-      results.push(item)
-      // console.log(`[INFO] results: ${JSON.stringify(results, null, 4)}`)
-    }
+    results.push(item)
   }
+  // console.log(`[INFO] prepareResults: ${JSON.stringify(results)}`);
   return results;
 }
 
-function readResult(results, handlerInput) {
-  return new Promise((resolve, reject) => {
-    const { attributesManager, requestEnvelope } = handlerInput;
-    attributesManager.getPersistentAttributes()
-      .then(async (pAttributes) => {
-        let sAttributes = attributesManager.getSessionAttributes();
-        let nextRead = sAttributes.nextRead;
-        let locale = pAttributes.locale;
+async function readResult(results, handlerInput) {
+  // console.log(`[INFO] results: ${JSON.stringify(results)}`);
+  const { attributesManager, responseBuilder } = handlerInput;
+  let sAttributes = attributesManager.getSessionAttributes();
+  let nextRead = sAttributes.nextRead;
+  let resultJson = {};
 
-        if (typeof nextRead === 'undefined') {
-          nextRead = 0;
-        } else {
-          nextRead++;
-        }
+  if (typeof nextRead === 'undefined') {
+    nextRead = 0;
+  } else {
+    nextRead++;
+  }
 
-        if (typeof locale === 'undefined') {
-          locale = requestEnvelope.request.locale.replace('-', '_');
-          pAttributes.locale = locale;
-        }
+  if (nextRead === results.length) {
+    console.log(`[INFO] nextRead > results.length`)
+    return responseBuilder
+      .speak(`There are no more results. You can start a new search if you'd like.`)
+      .getResponse();
+  }
+  
+  await isJwInit();
 
-        let jw = new JustWatch({
-          locale: locale
-        });
+  const searchResult = await JW.getTitle(results[nextRead].type, results[nextRead].id);
+  // console.log(`[INFO] searchResult: ${JSON.stringify(searchResult)}`);
 
-        const searchResult = await jw.getTitle(results[nextRead].type, results[nextRead].id);
-        // console.log(`[INFO] searchResult: ${JSON.stringify(searchResult)}`);
+  // let resultJson = {};
+  resultJson.title = searchResult.title;
+  resultJson.release = searchResult.original_release_year;
+  resultJson.description = searchResult.short_description;
+  // console.log(`[INFO] resultJson: ${JSON.stringify(resultJson)}`);
 
-        let resultJson = {};
-        resultJson.title = searchResult.title;
-        resultJson.release = searchResult.original_release_year;
-        resultJson.description = searchResult.short_description;
-        console.log(`[INFO] resultJson: ${JSON.stringify(resultJson)}`);
+  sAttributes.nextRead = nextRead;
 
-        sAttributes.nextRead = nextRead;
+  attributesManager.setSessionAttributes(sAttributes);
 
-        attributesManager.setSessionAttributes(sAttributes);
-
-        attributesManager.setPersistentAttributes(pAttributes);
-        attributesManager.savePersistentAttributes();
-
-        resolve(resultJson);
-      })
-      .catch((error) => {
-        console.log(`[ERROR] Error: ${error}`);
-        reject(error);
-      })
-  })
+  return resultJson;
 }
 
-function getNextResults(handlerInput) {
-  
+async function getNextResults(handlerInput) {
+  const { attributesManager, responseBuilder } = handlerInput;
+
+  const sAttributes = attributesManager.getSessionAttributes();
+  const results = sAttributes.results;
+
+  let speechText = '';
+
+  if (typeof results === 'undefined') {
+    return responseBuilder
+      .speak(`There was an error. Please try again later.`)
+      .withShouldEndSession(true)
+      .getResponse()
+  }
+
+  const result = await readResult(results, handlerInput);
+  console.log(`[INFO] result: ${JSON.stringify(result)}`);
+
+  const pos = sAttributes.nextRead + 1;
+
+  speechText = `The <say-as interpret-as="ordinal">${pos}</say-as> result is ${result.title} from ${result.release}: ${result.description} Is this the result you wanted?`;
+  speechText = speechText.replace('&', 'and');
+
+  return responseBuilder
+    .speak(speechText)
+    .getResponse();
 }
 
 async function getDetails(handlerInput) {
-  return new Promise((resolve, reject) => {
-    const { attributesManager, requestEnvelope, responseBuilder } = handlerInput;
-    attributesManager.getPersistentAttributes()
-      .then(async (pAttributes) => {
-        let speechText = '';
-        const sAttributes = attributesManager.getSessionAttributes();
+  const { attributesManager, responseBuilder } = handlerInput;
+  let speechText = '';
+  const sAttributes = attributesManager.getSessionAttributes();
 
-        // set the locale for search
-        let locale = pAttributes.locale;
+  await initJw();
+  const itemToRead = sAttributes.nextRead;
+  console.log(`[INFO] itemToRead: ${itemToRead}`);
 
-        // if locale has not been set, get it from request envelope
-        if (typeof locale === undefined) {
-          locale = requestEnvelope.request.locale.replace('-', '_');
-          pAttributes.locale = locale;
-        }
+  const id = sAttributes.results[itemToRead].id;
+  const type = sAttributes.results[itemToRead].type;
 
-        const itemToRead = sAttributes.nextRead;
-        console.log(`[INFO] itemToRead: ${itemToRead}`);
+  let providers = await JW.getProviders();
+  // console.log(`[INFO] providers: ${JSON.stringify(providers, null, 4)}`)
 
-        const id = sAttributes.results[itemToRead].id;
-        const type = sAttributes.results[itemToRead].type;
+  let searchResult = await JW.getTitle(type, id);
+  console.log(`[INFO] result: ${JSON.stringify(searchResult, null, 4)}`)
+  const title = searchResult.title;
 
-        let jw = new JustWatch({
-          locale: locale
-        });
+  let monetization_type = JSONQuery(`offers.monetization_type`, { data: searchResult }).value;
+  let provider_id = JSONQuery(`offers.provider_id`, { data: searchResult }).value;
+  let presentation_type = JSONQuery(`offers.presentation_type`, { data: searchResult }).value;
+  let retail_price = JSONQuery(`offers.retail_price`, { data: searchResult }).value;
+  let currency = JSONQuery(`offers.currency`, { data: searchResult }).value;
 
-        let providers = await jw.getProviders();
-        // console.log(`[INFO] providers: ${JSON.stringify(providers, null, 4)}`)
+  let buy = [];
+  let cinema = [];
+  let flatrate = [];
+  let rent = [];
 
-        let searchResult = await jw.getTitle(type, id);
-        console.log(`[INFO] result: ${JSON.stringify(searchResult, null, 4)}`)
-        const title = searchResult.title;
+  for (i = 0; i < searchResult.offers.length; i++) {
+    let item = {
+      provider_id: provider_id[i],
+      monetization_type: monetization_type[i],
+      presentation_type: presentation_type[i],
+      retail_price: retail_price[i],
+      currency: currency[i]
+    }
+    switch (monetization_type[i]) {
+      case 'buy':
+        buy.push(item);
+        break;
+      case 'cinema':
+        cinema.push(item);
+        break;
+      case 'flatrate':
+        flatrate.push(item);
+        break;
+      case 'rent':
+        rent.push(item);
+        break;
+      default:
+        console.log('[ERROR] switch/case failed');
+        break;
+    }
+  }
 
-        let monetization_type = JSONQuery(`offers.monetization_type`, { data: searchResult }).value;
-        let provider_id = JSONQuery(`offers.provider_id`, { data: searchResult }).value;
-        let presentation_type = JSONQuery(`offers.presentation_type`, { data: searchResult }).value;
-        let retail_price = JSONQuery(`offers.retail_price`, { data: searchResult }).value;
-        let currency = JSONQuery(`offers.currency`, { data: searchResult }).value;
+  if (flatrate.length !== 0) {
+    speechText += `You can stream ${title} on `;
+    speechText += readProviders(providers, flatrate);
+  }
 
-        let buy = [];
-        let cinema = [];
-        let flatrate = [];
-        let rent = [];
+  if (rent.length !== 0) {
+    speechText += `You can rent ${title} on `;
+    speechText += readProviders(providers, rent);
+  }
 
-        for (i = 0; i < searchResult.offers.length; i++) {
-          let item = {
-            provider_id: provider_id[i],
-            monetization_type: monetization_type[i],
-            presentation_type: presentation_type[i],
-            retail_price: retail_price[i],
-            currency: currency[i]
-          }
-          switch (monetization_type[i]) {
-            case 'buy':
-              buy.push(item);
-              break;
-            case 'cinema':
-              cinema.push(item);
-              break;
-            case 'flatrate':
-              flatrate.push(item);
-              break;
-            case 'rent':
-              rent.push(item);
-              break;
-            default:
-              console.log('[ERROR] switch/case failed');
-              break;
-          }
-        }
+  if (buy.length != 0) {
+    speechText += `You can buy ${title} on `;
+    speechText += readProviders(providers, buy);
+  }
 
-        if (flatrate.length !== 0) {
-          speechText += `You can stream ${title} on `;
-          speechText += readProviders(providers, flatrate);
-        }
-
-        if (rent.length !== 0) {
-          speechText += `You can rent ${title} on `;
-          speechText += readProviders(providers, rent);
-        }
-
-        if (buy.length != 0) {
-          speechText += `You can buy ${title} on `;
-          speechText += readProviders(providers, buy);
-        }
-
-        resolve(responseBuilder
-          .speak(speechText)
-          .getResponse());
-      })
-      .catch((error) => {
-        console.log(`[ERROR] Error: ${error}`);
-        reject(error);
-      });
-  })
+  return responseBuilder
+  .speak(speechText)
+  .getResponse();
 }
 
 function readProviders(providers, set) {
@@ -1262,17 +1225,19 @@ exports.handler = skillBuilder
   .addErrorHandlers(ErrorHandler)
   .withPersistenceAdapter(persistenceAdapter)
   .addRequestInterceptors(InitMemoryAttributesInterceptor)
-  .addRequestInterceptors(RequestHistoryInterceptor)
-  .addResponseInterceptors(function (handlerInput, response) {
-    let type = handlerInput.requestEnvelope.request.type;
-    let locale = handlerInput.requestEnvelope.request.locale;
-    if (type === 'LaunchRequest' || type === 'SessionEndedRequest') {
-      console.log(`[INFO] ${type} (${locale})`);
-    } else {
-      console.log(`[INFO] ${handlerInput.requestEnvelope.request.intent.name} (${locale})`);
-    }
-    console.log("\n" + "********** REQUEST ENVELOPE *********\n" +
-      JSON.stringify(handlerInput, null, 4));
+  .addRequestInterceptors(RequestHistoryInterceptor,
+    function (handlerInput) {
+      let type = handlerInput.requestEnvelope.request.type;
+      let locale = handlerInput.requestEnvelope.request.locale;
+      if (type === 'LaunchRequest' || type === 'SessionEndedRequest') {
+        console.log(`[INFO] ${type} (${locale})`);
+      } else {
+        console.log(`[INFO] ${handlerInput.requestEnvelope.request.intent.name} (${locale})`);
+      }
+      console.log("\n" + "********** REQUEST ENVELOPE *********\n" +
+        JSON.stringify(handlerInput, null, 4));
+    })
+  .addResponseInterceptors(function (response) {
     console.log("\n" + "************* RESPONSE **************\n" +
       JSON.stringify(response, null, 4));
   })
