@@ -11,6 +11,16 @@
           ],
           "name": "Just Stream",
           "description": "Sample Full Description"
+        },
+        "pt-BR": {
+          "summary": "Sample Short Description",
+          "examplePhrases": [
+            "Alexa open hello world",
+            "hello",
+            "help"
+          ],
+          "name": "Just Stream",
+          "description": "Sample Full Description"
         }
       },
       "isAvailableWorldwide": true,
@@ -23,12 +33,7 @@
         "endpoint": {
           "sourceDir": "lambda/custom",
           "uri": "justWatch"
-        },
-        "interfaces": [
-          {
-            "type": "RENDER_TEMPLATE"
-          }
-        ]
+        }
       }
     },
     "manifestVersion": "1.0"

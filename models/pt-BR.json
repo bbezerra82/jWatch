@@ -1,0 +1,47 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "aonde assistir",
+            "intents": [
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.YesIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NoIntent",
+                    "samples": []
+                },
+                {
+                    "name": "SearchIntent",
+                    "samples": [
+                        "busque por {title}"
+                    ],
+                    "slots": [
+                        {
+                            "name": "title",
+                            "type": "AMAZON.SearchQuery"
+                        }
+                    ]
+                },
+                {
+                    "name": "MoreIntent",
+                    "samples": [
+                        "mais"
+                    ]
+                }
+            ]
+        }
+    }
+}

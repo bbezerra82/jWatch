@@ -6,11 +6,14 @@
       "merge": {},
       "resources": {
         "manifest": {
-          "eTag": "bda171a8f40b217c9944089e313eba2d"
+          "eTag": "2b62dc0766695b2ccc791dcf1cac12be"
         },
         "interactionModel": {
           "en-GB": {
-            "eTag": "d7cf6f4a07ccbf551d3a51d1ed725aa2"
+            "eTag": "ff814da78fa3c0fcf230e4ca3a900f30"
+          },
+          "pt-BR": {
+            "eTag": "3aae3679041402fefca4d1c4bc381bad"
           }
         },
         "lambda": [
@@ -23,7 +26,7 @@
             "codeUri": "lambda/custom",
             "functionName": "justWatch",
             "handler": "index.handler",
-            "revisionId": "9abbfd85-526d-4b25-8b72-a2f83e05edcb",
+            "revisionId": "9b3e808e-f254-4c6d-884a-15cd862f2f1e",
             "runtime": "nodejs8.10"
           }
         ]
