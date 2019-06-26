@@ -28,6 +28,8 @@ const LocalisationInterceptor = require('./interceptors/LocalisationInterceptor'
 const InitMemoryAttributesInterceptor = require('./interceptors/InitMemoryAttributesInterceptor');
 const RequestLogInterceptor = require('./interceptors/RequestLogInterceptor');
 const ResponseLogInterceptor = require('./interceptors/ResponseLogInterceptor');
+const RequestHistoryInterceptor = require('./interceptors/RequestHistoryInterceptor');
+const InitJustWatchInterceptor = require('./interceptors/InitJustWatchInterceptor');
 
 // 4. Exports handler function and setup ===================================================
 const skillBuilder = Alexa.SkillBuilders.custom();
@@ -45,8 +47,9 @@ exports.handler = skillBuilder
 	.addErrorHandlers(ErrorHandler)
 	// .withPersistenceAdapter(persistenceAdapter)
 	.addRequestInterceptors(
-		// InitMemoryAttributesInterceptor,
-		// RequestHistoryInterceptor,
+		InitJustWatchInterceptor,
+		InitMemoryAttributesInterceptor,
+		RequestHistoryInterceptor,
 		LocalisationInterceptor,
 		RequestLogInterceptor)
 	.addResponseInterceptors(ResponseLogInterceptor)
@@ -74,7 +77,6 @@ const APP_ID = undefined;  // TODO replace with your Skill ID (OPTIONAL).
 
 const PAGE_SIZE = 5;
 
-const MAX_HISTORY_SIZE = 10; // remember only latest 10 intents 
 
 // const ADJECTIVES = [
 // 	'goto',
