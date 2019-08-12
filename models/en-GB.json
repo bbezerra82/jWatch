@@ -1,7 +1,7 @@
 {
     "interactionModel": {
         "languageModel": {
-            "invocationName": "just stream",
+            "invocationName": "where to watch",
             "intents": [
                 {
                     "name": "AMAZON.CancelIntent",
