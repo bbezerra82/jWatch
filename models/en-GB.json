@@ -13,7 +13,9 @@
                 },
                 {
                     "name": "AMAZON.StopIntent",
-                    "samples": []
+                    "samples": [
+                        "stop"
+                    ]
                 },
                 {
                     "name": "AMAZON.YesIntent",
@@ -32,6 +34,30 @@
                         {
                             "name": "title",
                             "type": "AMAZON.SearchQuery"
+                        }
+                    ]
+                },
+                {
+                    "name": "MoviesIntent",
+                    "samples": [
+                        "{movieTitle}"
+                    ],
+                    "slots": [
+                        {
+                            "name": "movieTitle",
+                            "type": "AMAZON.Movie"
+                        }
+                    ]
+                },
+                {
+                    "name": "SeriesIntent",
+                    "samples": [
+                        "{seriesTitle}"
+                    ],
+                    "slots": [
+                        {
+                            "name": "seriesTitle",
+                            "type": "AMAZON.TVSeries"
                         }
                     ]
                 },

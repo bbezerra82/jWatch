@@ -26,6 +26,9 @@ async function getImages(id, objectType, locale) {
 
 async function getMovie(id, objectType, locale) {
   return new Promise((resolve, reject) => {
+    // console.log(`[INFO] objectType: ${objectType}`)
+    objectType === 'show' ? objectType = 'tv' : objectType = objectType;
+    // console.log(`[INFO] objectType: ${objectType}`)
     var options = {
         "method": "GET",
         "hostname": "api.themoviedb.org",
@@ -33,7 +36,7 @@ async function getMovie(id, objectType, locale) {
         "path": `/3/${objectType}/${id}?api_key=${API_KEY}&language=${locale}`,
         "headers": {}
       };
-
+      console.log(`[INFO] URL: https://api.themoviedb.org/3/${objectType}/${id}?api_key=${API_KEY}&language=${locale}`);
       const request = https.request(options, (response) => {
         let returnData = '';
   

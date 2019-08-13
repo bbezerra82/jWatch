@@ -12,7 +12,23 @@ module.exports = {
 async function searchTitle(handlerInput) {
 	const { attributesManager, requestEnvelope } = handlerInput;
 
-	const title = Alexa.getSlotValue(requestEnvelope, 'title');
+	const intent = Alexa.getIntentName(requestEnvelope);
+	let title = '';
+
+	switch (intent) {
+		case 'MoviesIntent':
+			title = Alexa.getSlotValue(requestEnvelope, 'movieTitle');
+			break;
+		case 'SearchIntent':
+			title = Alexa.getSlotValue(requestEnvelope, 'title');
+			break;
+		case 'SeriesIntent':
+			title = Alexa.getSlotValue(requestEnvelope, 'seriesTitle');
+			break;
+		default:
+			console.log(`[ERROR] Something went wrong on WhereToStream.searchTitle`);
+			return false;
+	}
 
 	// perform the search
 	const searchResult = await utils.JW.search({
@@ -53,7 +69,7 @@ async function getServices(handlerInput) {
 	attributesManager.setSessionAttributes(sAttributes);
 
 	const output = {
-		searchResult, 
+		searchResult,
 		providersList
 	};
 

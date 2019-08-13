@@ -128,14 +128,32 @@ async function readResults(results, handlerInput) {
 	let sAttributes = attributesManager.getSessionAttributes();
 	let nextRead = sAttributes.nextRead || 0;
 
-	const titleUserInput = sAttributes.titleUserInput || Alexa.getSlotValue(requestEnvelope, 'title');
+	const intent = Alexa.getIntentName(requestEnvelope);
+	let titleUserInput = '';
+
+	switch (intent) {
+		case 'MoviesIntent':
+			titleUserInput = sAttributes.titleUserInput || Alexa.getSlotValue(requestEnvelope, 'movieTitle');
+			break;
+		case 'SearchIntent':
+			titleUserInput = sAttributes.titleUserInput || Alexa.getSlotValue(requestEnvelope, 'title');
+
+			break;
+		case 'SeriesIntent':
+			titleUserInput = sAttributes.titleUserInput || Alexa.getSlotValue(requestEnvelope, 'seriesTitle');
+			break;
+		default:
+			console.log(`[ERROR] Something went wrong on utils.readResults`);
+			return false;
+	}
+
 	sAttributes.titleUserInput = titleUserInput;
 
 	if (nextRead === results.length) {
 		// console.log(`[INFO] nextRead > results.length`);
 
 		const speechText = rAttributes.t('END_OF_RESULTS', titleUserInput) + rAttributes.t('END_OF_RESULTS_FOLLOW_UP');
-		
+
 		sAttributes.nextRead = 0;
 		attributesManager.setSessionAttributes(sAttributes);
 
@@ -146,14 +164,18 @@ async function readResults(results, handlerInput) {
 	}
 
 	const searchResult = await this.JW.getTitle(results[nextRead].type, results[nextRead].id);
-	// console.log(`[INFO] searchResult: ${JSON.stringify(searchResult)}`);
+	console.log(`[INFO] searchResult: ${JSON.stringify(searchResult)}`);
 
-	title = searchResult.title;
-	release = searchResult.original_release_year;
-	description = searchResult.short_description;
-	externalId = searchResult.external_ids[1].external_id;
-	objectType = searchResult.object_type;
+	const title = searchResult.title;
+	const release = searchResult.original_release_year;
+	const description = searchResult.short_description;
+	const objectType = searchResult.object_type;
 	const locale = Alexa.getLocale(requestEnvelope);
+	const providersList = searchResult.external_ids;
+	let externalId = '';
+	for (let element of providersList) {
+		if (element.provider === 'tmdb') externalId = element.external_id;
+	}
 
 	const imagestPath = await tmbd.getImages(externalId, objectType, locale);
 	// console.log(`[INFO] tmbdResult: ${tmbdResult}`);
@@ -165,7 +187,7 @@ async function readResults(results, handlerInput) {
 	console.log(`[INFO] backdropPath: ${imagestPath.backdrop}`);
 	console.log(`[INFO] backdropUrl: https://image.tmdb.org/t/p/w1280${imagestPath.backdrop}`);
 	console.log(`[INFO] posterPath: ${imagestPath.poster}`);
-	console.log(`[INFO] posterPath: https://image.tmdb.org/t/p/${imagestPath.poster}`);
+	console.log(`[INFO] posterPath: https://image.tmdb.org/t/p/w1280${imagestPath.poster}`);
 
 	let credits = '';
 	for (i = 0; i < 3; i++) {
@@ -259,7 +281,7 @@ function readServices(results, handlerInput) {
 		speechText += rAttributes.t('NO_STREAM', title)
 	}
 
-	if (rent.length !== 0 && buy.length !==0) {
+	if (rent.length !== 0 && buy.length !== 0) {
 		speechText += rAttributes.t('BUT_RENT_BUY') + rAttributes.t('RENT_BUY_FOLLOW_UP');
 	} else if (rent.length != 0) {
 		speechText += rAttributes.t('BUT_RENT') + rAttributes.t('RENT_BUY_FOLLOW_UP');

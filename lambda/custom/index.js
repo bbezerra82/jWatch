@@ -21,6 +21,8 @@ const SearchIntentHandler = require('./handlers/SearchIntentHandler');
 const MoreIntentHandler = require('./handlers/MoreIntentHandler');
 const LaunchRequestHandler = require('./handlers/LaunchRequestHandler');
 const SessionEndedHandler = require('./handlers/SessionEndedHandler');
+const MoviesIntentHandler = require('./handlers/MoviesIntentHandler');
+const SeriesIntentHandler = require('./handlers/SeriesIntentHandler');
 const ErrorHandler = require('./handlers/ErrorHandler');
 
 // interceptors
@@ -40,6 +42,8 @@ exports.handler = skillBuilder
 		AMAZON_NoIntentHandler,
 		AMAZON_YesIntentHandler,
 		SearchIntentHandler,
+		MoviesIntentHandler,
+		SeriesIntentHandler,
 		MoreIntentHandler,
 		LaunchRequestHandler,
 		SessionEndedHandler
